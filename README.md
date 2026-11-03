@@ -52,8 +52,8 @@ Daten beim Deinstallieren verloren.
 Voraussetzungen: Android Studio (aktuell), JDK passend zum Android Gradle Plugin.
 
 ```
-git clone <dieses Repository>
-cd <Ordner>
+git clone https://github.com/tj4smile/qwirkle-punktezaehler.git
+cd qwirkle-punktezaehler
 ./gradlew assembleDebug        # Windows: gradlew.bat assembleDebug
 ```
 
