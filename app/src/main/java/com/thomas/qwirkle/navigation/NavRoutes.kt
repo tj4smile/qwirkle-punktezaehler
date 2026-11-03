@@ -1,0 +1,35 @@
+package com.thomas.qwirkle.navigation
+
+object NavRoutes {
+    const val ARG_GAME_ID = "gameId"
+    const val ARG_ROUND_ID = "roundId"
+
+    // Bildschirme ohne Argument
+    const val HOME = "home"
+    const val PLAYERS = "players"
+    const val NEWGAME = "newgame"
+    const val STATISTICS = "statistics"
+    const val DATA = "data"
+    const val INFO = "info"
+
+    // Reihenfolge & Farben vor dem Spielstart: Spieler-IDs als "1,2,3", Testspiel true/false
+    const val ARG_PLAYER_IDS = "playerIds"
+    const val ARG_TEST_GAME = "testGame"
+    const val SETUP = "setup/{$ARG_PLAYER_IDS}/{$ARG_TEST_GAME}"
+
+    fun setup(playerIds: List<Long>, isTestGame: Boolean) =
+        "setup/${playerIds.joinToString(",")}/$isTestGame"
+
+    // Bildschirme eines laufenden Spiels (Route-Muster mit Argument)
+    const val SCORING = "scoring/{$ARG_GAME_ID}"     // Punkteerfassung
+    const val HISTORY = "history/{$ARG_GAME_ID}"     // Spielverlauf
+    const val EDITROUND = "editround/{$ARG_GAME_ID}/{$ARG_ROUND_ID}" // Runde bearbeiten
+    const val GAMEEND = "gameend/{$ARG_GAME_ID}"     // Spielende (Endspielbonus)
+    const val RESULTS = "results/{$ARG_GAME_ID}"     // Endauswertung
+
+    fun scoring(gameId: Long) = "scoring/$gameId"
+    fun history(gameId: Long) = "history/$gameId"
+    fun editRound(gameId: Long, roundId: Long) = "editround/$gameId/$roundId"
+    fun gameEnd(gameId: Long) = "gameend/$gameId"
+    fun results(gameId: Long) = "results/$gameId"
+}

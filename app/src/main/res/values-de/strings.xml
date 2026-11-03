@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Qwirkle Punktezähler</string>
+
+    <!-- Allgemein -->
+    <string name="common_back">Zurück</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_delete">Löschen</string>
+    <string name="common_discard">Verwerfen</string>
+    <string name="common_save">Speichern</string>
+    <string name="common_finish">Beenden</string>
+    <string name="common_loading">Lade …</string>
+
+    <!-- Startbildschirm -->
+    <string name="home_running_title">Laufendes Spiel</string>
+    <string name="home_resume">Spiel fortsetzen</string>
+    <string name="home_last_game">Letztes Spiel</string>
+    <string name="home_no_game">Noch kein Spiel gespeichert.</string>
+    <string name="home_last_date">Datum: %1$s</string>
+    <string name="home_last_points">Gesamtpunkte: %1$d</string>
+    <string name="home_last_qwirkles">Qwirkles: %1$d</string>
+    <string name="home_new_game">Neues Spiel</string>
+    <string name="home_statistics">Statistik</string>
+    <string name="home_players">Spieler verwalten</string>
+    <string name="home_games_played">Gespielte Partien: %1$d</string>
+    <string name="home_version">Version %1$s</string>
+    <string name="home_confirm_new_title">Neues Spiel starten?</string>
+    <string name="home_confirm_new_text">Es läuft noch ein Spiel. Wenn du ein neues Spiel startest, wird das laufende verworfen.</string>
+    <string name="home_confirm_discard_title">Laufendes Spiel verwerfen?</string>
+    <string name="home_confirm_discard_text">Alle bisher eingegebenen Runden gehen verloren.</string>
+
+    <!-- Spielerverwaltung -->
+    <string name="players_title">Spieler verwalten</string>
+    <string name="players_add">+ Neuen Spieler hinzufügen</string>
+    <string name="players_empty">Noch keine Spieler angelegt.</string>
+    <string name="players_edit">Bearbeiten</string>
+    <string name="players_dialog_new_title">Neuer Spieler</string>
+    <string name="players_dialog_add">Hinzufügen</string>
+    <string name="players_dialog_edit_title">Spieler bearbeiten</string>
+    <string name="players_field_name">Name</string>
+    <string name="players_field_color">Farbe</string>
+    <string name="players_color_description">Farbe %1$d</string>
+    <string name="players_delete_title">Spieler löschen?</string>
+    <string name="players_delete_text">„%1$s“ wird aus der Liste entfernt. Bisherige Spiele und Statistiken bleiben erhalten.</string>
+    <string name="error_name_empty">Bitte einen Namen eingeben.</string>
+    <string name="error_name_too_long">Maximal %1$d Zeichen.</string>
+    <string name="error_name_duplicate">Diesen Namen gibt es schon.</string>
+
+    <!-- Neues Spiel -->
+    <string name="newgame_title">Neues Spiel</string>
+    <string name="newgame_no_players">Es sind noch keine Spieler angelegt. Lege zuerst mindestens %1$d Spieler an.</string>
+    <string name="newgame_selected">Ausgewählt: %1$d von %2$d</string>
+    <string name="newgame_min_hint">Mindestens %1$d Spieler wählen.</string>
+    <string name="newgame_order_hint">Spielreihenfolge: in der Reihenfolge der Auswahl.</string>
+    <string name="newgame_test_game">Als Testspiel markieren</string>
+    <string name="newgame_test_game_hint">Nicht in Statistik speichern</string>
+
+    <!-- Punkteerfassung -->
+    <string name="scoring_round">Runde %1$d</string>
+    <string name="scoring_points_label">Punkte</string>
+    <string name="scoring_qwirkles">Qwirkles</string>
+    <string name="scoring_qwirkle_less">Ein Qwirkle weniger</string>
+    <string name="scoring_qwirkle_more">Ein Qwirkle mehr</string>
+    <string name="scoring_bonus">+%1$d</string>
+    <string name="scoring_note">Punkte bitte ohne Qwirkle-Bonus eintragen. Der Bonus (+%1$d je Qwirkle) wird automatisch addiert.</string>
+    <string name="scoring_points_for">Punkte für %1$s</string>
+    <string name="scoring_picker_keyboard">Tastatur</string>
+    <string name="scoring_picker_wheel">Rad</string>
+    <string name="scoring_picker_more_hint">Mehr als %1$d? Auf &quot;Tastatur&quot; tippen.</string>
+    <string name="common_ok">OK</string>
+    <string name="scoring_save">Runde speichern</string>
+    <string name="scoring_save_changes">Änderung speichern</string>
+    <string name="scoring_edit_round">Runde %1$d bearbeiten</string>
+
+    <!-- Spielverlauf -->
+    <string name="history_title">Spielverlauf</string>
+    <string name="history_sum">SUMME</string>
+    <string name="history_round">Runde %1$d</string>
+    <string name="history_empty">Noch keine Runde gespielt.</string>
+    <string name="history_legend">★ = Qwirkle in dieser Runde (Bonus ist enthalten)</string>
+    <string name="history_edit_hint">Eine Runde antippen, um ihre Punkte zu ändern.</string>
+    <string name="history_add_round">Runde hinzufügen</string>
+    <string name="history_delete_last">Letzte Runde löschen</string>
+    <string name="history_delete_last_title">Letzte Runde löschen?</string>
+    <string name="history_delete_last_text">Die zuletzt gespeicherte Runde wird entfernt.</string>
+
+    <!-- Spielende -->
+    <string name="gameend_title">Spiel beendet</string>
+    <string name="gameend_question">Wer hat den letzten Stein gelegt?</string>
+    <string name="gameend_nobody">Niemand (kein Endspielbonus)</string>
+    <string name="gameend_bonus">Bonus +%1$d Punkte</string>
+    <string name="gameend_show_results">Endauswertung anzeigen</string>
+
+    <!-- Endauswertung -->
+    <string name="results_title">Endauswertung</string>
+    <string name="results_test_game">Testspiel: wird nicht in der Statistik gezählt.</string>
+    <string name="results_rank">%1$d.</string>
+    <string name="results_points">%1$d Punkte</string>
+    <string name="results_qwirkles_title">Qwirkles</string>
+    <string name="results_no_qwirkles">Keine Qwirkles in diesem Spiel.</string>
+    <string name="results_save">Spiel speichern</string>
+    <string name="results_discard">Spiel verwerfen</string>
+    <string name="results_discard_title">Spiel verwerfen?</string>
+    <string name="results_discard_text">Das Spiel wird nicht gespeichert und kann nicht wiederhergestellt werden.</string>
+
+    <!-- Statistik -->
+    <string name="stats_title">Langzeitstatistik</string>
+    <string name="stats_games">Partien</string>
+    <string name="stats_points">Punkte</string>
+    <string name="stats_qwirkles">Qwirkles</string>
+    <string name="stats_avg_points">Ø Punkte</string>
+    <string name="stats_avg_qwirkles">Ø Qwirkles</string>
+    <string name="stats_list_title">Spiele</string>
+    <string name="stats_list_empty">Noch keine Spiele gespeichert.</string>
+    <string name="stats_game_line">%1$s | %2$d Pkt</string>
+    <string name="stats_game_detail">%1$d Spieler, %2$d Qwirkles</string>
+    <string name="stats_records">Rekorde</string>
+    <string name="stats_max_points">Höchste Punktzahl</string>
+    <string name="stats_max_qwirkles">Meiste Qwirkles</string>
+    <string name="stats_delete_title">Spiel löschen?</string>
+    <string name="stats_delete_text">Das Spiel vom %1$s wird dauerhaft gelöscht.</string>
+
+
+    <!-- Einstellungen und Autor -->
+    <string name="settings_dark_theme">Dunkles Design</string>
+    <string name="settings_dark_theme_system">Folgt dem System (dunkel)</string>
+    <string name="home_author">Entwickelt von %1$s</string>
+
+    <!-- Daten und Sicherung -->
+    <string name="home_data">Daten sichern &amp; wiederherstellen</string>
+    <string name="data_title">Daten &amp; Sicherung</string>
+    <string name="data_backup_title">Sicherung (JSON)</string>
+    <string name="data_backup_text">Speichert alle Spieler, Spiele und Runden in einer Datei. Damit kannst du die Daten später wieder einspielen, zum Beispiel auf einem neuen Handy.</string>
+    <string name="data_backup_button">Sicherung speichern</string>
+    <string name="data_csv_title">Export für Excel (CSV)</string>
+    <string name="data_csv_text">Eine Tabelle mit allen Runden und Punkten pro Spieler zum Auswerten in Excel oder LibreOffice. Sie kann nicht wieder in die App geladen werden.</string>
+    <string name="data_csv_button">CSV exportieren</string>
+    <string name="data_import_title">Sicherung einspielen</string>
+    <string name="data_import_text">Lädt eine zuvor gespeicherte Sicherung (JSON). Die vorhandenen Daten werden dabei ersetzt.</string>
+    <string name="data_import_button">Sicherung auswählen …</string>
+    <string name="data_import_confirm_title">Sicherung einspielen?</string>
+    <string name="data_import_confirm_text">Alle jetzt in der App vorhandenen Spieler, Spiele und Runden werden durch den Inhalt der Sicherung ersetzt. Das lässt sich nicht rückgängig machen. Speichere vorher bei Bedarf eine neue Sicherung.</string>
+    <string name="data_import_confirm_action">Datei auswählen</string>
+    <string name="data_status_export_ok">Die Datei wurde gespeichert.</string>
+    <string name="data_status_import_ok">Sicherung eingespielt: %1$d Spieler, %2$d Spiele.</string>
+    <string name="data_error_write">Die Datei konnte nicht gespeichert werden.</string>
+    <string name="data_error_read">Die Datei konnte nicht gelesen werden. Deine Daten sind unverändert.</string>
+    <string name="data_error_not_backup">Das ist keine Qwirkle-Sicherung. Deine Daten sind unverändert.</string>
+    <string name="data_error_newer">Diese Sicherung stammt aus einer neueren App-Version. Bitte aktualisiere die App. Deine Daten sind unverändert.</string>
+    <string name="data_error_inconsistent">Die Sicherung ist beschädigt oder unvollständig. Deine Daten sind unverändert.</string>
+    <string name="data_error_too_large">Die Datei ist zu groß für eine Sicherung. Deine Daten sind unverändert.</string>
+    <string name="data_error_unknown">Der Vorgang ist fehlgeschlagen. Deine Daten sind unverändert.</string>
+
+    <!-- CSV-Spaltenüberschriften -->
+    <string name="csv_date">Datum</string>
+    <string name="csv_game">Spiel</string>
+    <string name="csv_test_game">Testspiel</string>
+    <string name="csv_finished">Abgeschlossen</string>
+    <string name="csv_round">Runde</string>
+    <string name="csv_player">Spieler</string>
+    <string name="csv_points">Punkte</string>
+    <string name="csv_qwirkles">Qwirkles</string>
+    <string name="csv_qwirkle_bonus">Qwirkle-Bonus</string>
+    <string name="csv_round_total">Rundenpunkte</string>
+    <string name="csv_end_bonus">Endbonus</string>
+    <string name="csv_yes">Ja</string>
+    <string name="csv_no">Nein</string>
+
+    <!-- Spielerstatistik -->
+    <string name="pstats_title">Spieler</string>
+    <string name="pstats_hint">Nur gespeicherte Partien, ohne Testspiele. Bei Punktgleichstand auf Platz 1 zählt der Sieg für alle Beteiligten.</string>
+    <string name="pstats_games">Gespielte Partien</string>
+    <string name="pstats_wins">Siege</string>
+    <string name="pstats_wins_value">%1$d (%2$s)</string>
+    <string name="pstats_avg_points">Ø Punkte</string>
+    <string name="pstats_best_points">Bestwert</string>
+    <string name="pstats_qwirkles">Qwirkles</string>
+    <string name="pstats_qwirkles_value">%1$d (Ø %2$s)</string>
+    <string name="wikipedia_url">https://de.wikipedia.org/wiki/Qwirkle</string>
+    <string name="home_wikipedia">Qwirkle bei Wikipedia</string>
+    <string name="newgame_next">Weiter</string>
+    <string name="setup_title">Reihenfolge &amp; Farben</string>
+    <string name="setup_hint">Mit den Pfeilen die Spielreihenfolge ändern. Auf den Farbpunkt tippen, um die Farbe zu ändern. Jede Farbe gibt es nur einmal pro Spiel.</string>
+    <string name="setup_colors_adjusted">Doppelte Farben wurden automatisch geändert.</string>
+    <string name="setup_start">Los geht\'s</string>
+    <string name="setup_color_title">Farbe für %1$s</string>
+    <string name="setup_color_swap_hint">Ist die Farbe schon vergeben, tauschen die beiden Spieler ihre Farben. Die Farbe wird dauerhaft gespeichert.</string>
+    <string name="setup_change_color">Farbe von %1$s ändern</string>
+    <string name="setup_move_up">%1$s nach oben</string>
+    <string name="setup_move_down">%1$s nach unten</string>
+    <string name="home_backup_title">Sicherung empfohlen</string>
+    <string name="home_backup_never">Du hast noch keine Sicherung angelegt. Speichere deine Spiele, damit sie bei einem Gerätewechsel oder einer Neuinstallation nicht verloren gehen.</string>
+    <string name="home_backup_old">Seit deiner letzten Sicherung sind neue Partien dazugekommen. Lege eine neue Sicherung an.</string>
+    <string name="home_backup_now">Jetzt sichern</string>
+    <string name="home_backup_later">Später</string>
+    <string name="home_info">Info &amp; Spielregeln</string>
+    <string name="finish_needs_round">„Beenden“ ist möglich, sobald eine Runde gespeichert ist.</string>
+    <string name="info_title">Info &amp; Spielregeln</string>
+    <string name="info_about_title">Über die App</string>
+    <string name="info_about_text">Ein Punktezähler für das Legespiel Qwirkle: Spieler verwalten, Runden erfassen, Ergebnisse und Statistik ansehen.</string>
+    <string name="info_privacy_title">Deine Daten</string>
+    <string name="info_privacy_text">Alle Daten bleiben auf diesem Gerät. Die App sendet nichts ins Internet und braucht keine Anmeldung. Über „Daten sichern &amp; wiederherstellen“ kannst du eine Sicherungsdatei anlegen und später wieder einspielen.</string>
+    <string name="info_rules_title">Spielregeln (Kurzfassung)</string>
+    <string name="info_rules_intro">Qwirkle wird mit Steinen in sechs Farben und sechs Formen gespielt. Jeder Spieler hält sechs Steine in der Hand und legt reihum an die bereits liegenden Steine an.</string>
+    <string name="info_rules_turn_title">Ein Zug</string>
+    <string name="info_rules_turn_text">Du legst einen oder mehrere Steine in einer geraden Linie an. Jede Reihe, die dabei entsteht, muss entweder nur eine Farbe oder nur eine Form haben, und kein Stein darf in einer Reihe doppelt vorkommen. Danach ziehst du Steine nach. Statt zu legen kannst du auch Steine tauschen.</string>
+    <string name="info_rules_points_title">Punkte</string>
+    <string name="info_rules_points_text">Für jede Reihe, an der du mit deinem Zug beteiligt bist, bekommst du einen Punkt pro Stein dieser Reihe, auch für schon liegende Steine. Ein Stein, der zu zwei Reihen gehört, zählt in beiden. Vervollständigst du eine Reihe aus sechs Steinen, ist das ein Qwirkle: Dafür gibt es 6 Bonuspunkte zusätzlich.</string>
+    <string name="info_rules_end_title">Spielende</string>
+    <string name="info_rules_end_text">Das Spiel endet, wenn der Beutel leer ist und ein Spieler alle seine Steine abgelegt hat. Dieser Spieler bekommt 6 Bonuspunkte. Wer die meisten Punkte hat, gewinnt.</string>
+    <string name="info_rules_app_title">In dieser App</string>
+    <string name="info_rules_app_text">Trage in jeder Runde die Punkte ohne Qwirkle-Bonus ein und zähle die Qwirkles dazu. Die App addiert 6 Punkte pro Qwirkle selbst. Den Endspielbonus von 6 Punkten wählst du beim Beenden aus. Das Spiel ist für 2 bis 4 Spieler gedacht, die App erlaubt bis zu 7. Genaue Regeln stehen in der Spielanleitung.</string>
+    <string name="info_rules_disclaimer">Dies ist eine unabhängige Zählhilfe und steht in keiner Verbindung zu den Rechteinhabern von Qwirkle.</string>
+    <string name="info_licenses_title">Lizenzen</string>
+    <string name="info_licenses_text">Die App nutzt Android Jetpack (Compose, Room, Navigation, Lifecycle) und Material Design. Diese Bibliotheken stehen unter der Apache License 2.0.</string>
+    <string name="home_running_title_test">Laufendes Spiel (Testspiel)</string>
+    <string name="home_running_players">%1$d Spieler</string>
+    <plurals name="home_running_rounds">
+        <item quantity="one">%1$d Runde gespielt</item>
+        <item quantity="other">%1$d Runden gespielt</item>
+    </plurals>
+    <string name="home_running_no_round">Noch keine Runde</string>
+    <string name="home_running_leader">Führt: %1$s (%2$d)</string>
+    <string name="home_running_tie">Gleichstand (%1$d)</string>
+    <string name="home_running_total">Gesamt: %1$d</string>
+</resources>

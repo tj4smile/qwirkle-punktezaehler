@@ -1,0 +1,1400 @@
+================================================================================
+QWIRKLE PUNKTEZÄHLER
+Technische Projektdokumentation
+================================================================================
+
+Dokumentversion : 2.14
+Stand           : 03.11.2026
+App-Version     : 1.6 (versionCode 7)
+Paketname       : com.thomas.qwirkle
+Plattform       : Android (Kotlin, Jetpack Compose)
+Sprache der UI  : Deutsch (bei deutscher Systemsprache), sonst Englisch
+
+
+--------------------------------------------------------------------------------
+INHALTSVERZEICHNIS
+--------------------------------------------------------------------------------
+
+  1. Überblick
+  2. Technologie-Stack
+  3. Einrichtung und Build
+  4. Architektur
+  5. Projektstruktur
+  6. Datenmodell (Room)
+  7. Fachregeln und Berechnungen
+  8. Datenzugriff (DAOs und Repository)
+  9. Navigation
+ 10. Bildschirme
+ 11. ViewModels
+ 12. Spielablauf (Ende-zu-Ende)
+ 13. Design und Theme
+ 14. Konventionen
+ 15. Getroffene Entscheidungen
+ 16. Bekannte Einschränkungen
+ 17. Weiterentwicklung (Roadmap)
+ 18. Glossar
+ 19. Tests
+ 20. Datenbank-Migrationen
+ 21. Export, Sicherung und Import
+ 22. Verteilung (APK, Signierung)
+
+
+================================================================================
+1. ÜBERBLICK
+================================================================================
+
+Die App ersetzt Stift und Zettel beim Brettspiel "Qwirkle". Sie erfasst pro
+Runde die Punkte aller Spieler, berechnet die Qwirkle-Boni und den
+Endspielbonus automatisch, zeigt Spielverlauf und Endauswertung und führt eine
+Langzeitstatistik über alle gespielten Partien.
+
+Funktionsumfang:
+
+  - Spielerverwaltung (anlegen, umbenennen, Farbe ändern, löschen)
+  - Neues Spiel mit 2 bis 7 Spielern, optional als Testspiel
+  - Punkteerfassung pro Runde (alle Spieler untereinander)
+  - Automatische Bonusberechnung (6 Punkte pro Qwirkle)
+  - Spielverlauf als Tabelle mit Summenzeile
+  - Spielende mit Endspielbonus (6 Punkte)
+  - Endauswertung mit Platzierungen und Qwirkle-Balkendiagramm
+  - Laufendes Spiel bleibt gespeichert und kann fortgesetzt werden
+  - Langzeitstatistik mit Kennzahlen, Spielerstatistik, Spieleliste und Rekorden
+  - Hell- und Dunkelmodus: bei dunklem System immer dunkel, bei hellem System
+    per Schalter auf der Startseite wählbar
+  - Zweisprachig: Deutsch bei deutscher Systemsprache, sonst Englisch
+  - Daten sichern, wiederherstellen und exportieren (JSON-Sicherung, CSV für
+    Excel)
+  - Autorenhinweis auf der Startseite
+  - Vollständig offline, alle Daten liegen lokal in einer SQLite-Datenbank
+
+Vorlagen für die Umsetzung waren der Phasenplan (Phase 1 bis 5) und die
+Wireframes 01 bis 09.
+
+
+================================================================================
+2. TECHNOLOGIE-STACK
+================================================================================
+
+  Sprache            Kotlin
+  UI                 Jetpack Compose, Material 3
+  Datenbank          Room (SQLite), Zugriff über Kotlin Flows
+  Annotation-Proc.   KSP (für den Room-Compiler)
+  Navigation         Navigation Compose (String-Routen mit Argumenten)
+  Zustandshaltung    ViewModel + StateFlow
+  Nebenläufigkeit    Kotlin Coroutines / Flow
+  Einstellungen      SharedPreferences (AppSettings)
+  Sicherung          org.json (JSON), Storage Access Framework (Dateidialog)
+  Dependency Inj.    Manuell über die Application-Klasse (kein Hilt)
+  Build              Gradle (Kotlin DSL), Version Catalog (libs.versions.toml)
+  Android Gradle Pl. AGP 9.4.1 mit eingebautem Kotlin (Kotlin 2.2.10), Gradle 9.6.0
+
+Verwendete Versionen (zum Stand dieser Dokumentation):
+
+  Room                       2.8.4   (androidx.room, NICHT androidx.room3)
+  KSP                        2.3.6   (mindestens 2.3.6 wegen AGP 9)
+  Navigation Compose         2.9.8
+  Lifecycle ViewModel Compose 2.10.0
+  Room-Gradle-Plugin         androidx.room 2.8.4 (Schema-Export)
+  Compose BOM                2026.02.01
+  compileSdk / targetSdk     37
+  minSdk                     26 (Android 8.0); in app/build.gradle.kts änderbar
+
+Hinweis zu Room: Es wird bewusst Room 2.x verwendet. Room 3.0 existiert, nutzt
+aber das Paket androidx.room3. Ein Wechsel wäre vor allem ein Austausch von
+Imports und Artefakten.
+
+
+================================================================================
+3. EINRICHTUNG UND BUILD
+================================================================================
+
+3.1 Projekt anlegen
+-------------------
+  1. Android Studio: New Project -> "Empty Activity" (Compose-Vorlage).
+  2. Package name: com.thomas.qwirkle  (muss exakt stimmen)
+  3. Build configuration language: Kotlin DSL
+  4. Minimum SDK: API 26 (Android 8.0); nachträglich änderbar in
+     app/build.gradle.kts (defaultConfig -> minSdk)
+
+3.2 Gradle-Konfiguration
+------------------------
+Datei gradle/libs.versions.toml (Auszug, bestehende Einträge bleiben):
+
+  [versions]
+  room = "2.8.4"
+  ksp = "2.3.6"
+  navigationCompose = "2.9.8"
+  lifecycleViewmodel = "2.10.0"
+
+  [libraries]
+  androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+  androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+  androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+  androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+  androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodel" }
+  androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+
+  [plugins]
+  ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+  androidx-room = { id = "androidx.room", version.ref = "room" }
+
+Datei build.gradle.kts (Projektebene):
+
+  plugins {
+      // ... bestehende Einträge
+      alias(libs.plugins.ksp) apply false
+      alias(libs.plugins.androidx.room) apply false
+  }
+
+Datei app/build.gradle.kts:
+
+  plugins {
+      // ... bestehende Einträge
+      alias(libs.plugins.ksp)
+      alias(libs.plugins.androidx.room)
+  }
+
+  room {
+      schemaDirectory("$projectDir/schemas")
+  }
+
+  dependencies {
+      // ... bestehende Einträge
+      implementation(libs.androidx.room.runtime)
+      implementation(libs.androidx.room.ktx)
+      ksp(libs.androidx.room.compiler)
+      implementation(libs.androidx.navigation.compose)
+      implementation(libs.androidx.lifecycle.viewmodel.compose)
+      androidTestImplementation(libs.androidx.room.testing)
+  }
+
+Wichtig:
+  - Bei AGP 9 ist Kotlin eingebaut. Das Plugin "kotlin.android" darf NICHT
+    zusätzlich eingetragen werden.
+  - Ältere KSP-Versionen (z. B. 2.2.10-2.0.2) führen mit AGP 9 zu dem Fehler
+    "Using kotlin.sourceSets DSL ... is not allowed with built-in Kotlin".
+    Lösung: KSP auf 2.3.6 oder neuer. Das Flag
+    android.disallowKotlinSourceSets=false NICHT setzen.
+  - Es werden keine Material-Icons verwendet. Die Abhängigkeit
+    material-icons-core/-extended wird nicht benötigt.
+
+3.3 AndroidManifest.xml
+-----------------------
+Im <application>-Tag muss die eigene Application-Klasse eingetragen sein:
+
+  android:name=".QwirkleApp"
+
+3.4 Bauen und Starten
+---------------------
+  - Build -> Rebuild Project
+  - Run auf Emulator oder Gerät (API 26 oder höher)
+
+3.5 Datenbank zurücksetzen (Entwicklung)
+----------------------------------------
+Die Datenbank hat Version 1; Migrationen sind eingerichtet (Abschnitt 20),
+es gibt aber noch keine. Stammt die Datenbank auf dem Gerät aus einer frühen
+Entwurfsphase und passt nicht zum aktuellen Schema, erscheint beim Start
+"Room cannot verify the data integrity". Dann die App einmal vom Gerät
+deinstallieren (oder den Speicher löschen). Ab der ersten Veröffentlichung
+werden Schemaänderungen nur noch über Migrationen durchgeführt.
+
+
+================================================================================
+4. ARCHITEKTUR
+================================================================================
+
+Die App folgt einer einfachen, geschichteten Architektur (MVVM):
+
+  +--------------------------------------------------------------+
+  |  UI-Schicht (Jetpack Compose)                                |
+  |  Screens in ui/screens, Komponenten in ui/components         |
+  +------------------------------+-------------------------------+
+                                 | beobachtet StateFlow, ruft Methoden auf
+  +------------------------------v-------------------------------+
+  |  ViewModel-Schicht (viewmodel/)                              |
+  |  hält UI-Zustand, ruft Repository in viewModelScope auf      |
+  +------------------------------+-------------------------------+
+                                 |
+  +------------------------------v-------------------------------+
+  |  Repository (data/repository/GameRepository)                 |
+  |  Fachlogik der Datenschicht, Validierung, Berechnung         |
+  +------------------------------+-------------------------------+
+                                 |
+  +------------------------------v-------------------------------+
+  |  DAOs (data/dao)  ->  Room-Datenbank (data/database)         |
+  +--------------------------------------------------------------+
+
+Grundprinzipien:
+
+  - Unidirektionaler Datenfluss: UI zeigt Zustand an und meldet Ereignisse an
+    das ViewModel. Datenbank-Änderungen kommen über Flows zurück.
+  - Eine einzige Wahrheit: Der Spielstand liegt in der Datenbank. Gerechnet
+    wird beim Anzeigen (siehe GameCalculations), nicht gespeichert.
+  - Manuelle Dependency Injection: QwirkleApp erzeugt Datenbank, GameRepository,
+    BackupRepository und AppSettings einmalig. Die Composables holen sie mit
+    rememberRepository(), rememberBackupRepository() und rememberSettings()
+    und übergeben sie an die ViewModel-Factory.
+
+Beispiel für die Verdrahtung in einem Screen:
+
+  @Composable
+  fun PlayerManagementScreen(
+      onBack: () -> Unit,
+      viewModel: PlayerViewModel = viewModel(
+          factory = PlayerViewModel.factory(rememberRepository())
+      )
+  ) { ... }
+
+Jedes ViewModel besitzt dafür eine companion-Funktion factory(...).
+
+
+================================================================================
+5. PROJEKTSTRUKTUR
+================================================================================
+
+app/src/main/java/com/thomas/qwirkle/
+|
++-- MainActivity.kt                   Einstiegspunkt, setzt Theme + Navigation
++-- QwirkleApp.kt                     Application: DB, Repositories, Einstellungen
+|
++-- data/
+|   +-- entity/
+|   |   +-- Player.kt                 Spieler
+|   |   +-- GameHistory.kt            Spiel (Kopfdaten und Ergebnis)
+|   |   +-- GamePlayer.kt             Teilnehmer eines Spiels (+ Reihenfolge)
+|   |   +-- Round.kt                  Runde eines Spiels
+|   |   +-- RoundScore.kt             Punkte eines Spielers in einer Runde
+|   +-- dao/
+|   |   +-- PlayerDao.kt
+|   |   +-- GameHistoryDao.kt
+|   |   +-- GamePlayerDao.kt
+|   |   +-- RoundDao.kt
+|   |   +-- RoundScoreDao.kt
+|   |   +-- BackupDao.kt              Gesamt-Schnappschuss, Ersetzen aller Daten
+|   +-- database/
+|   |   +-- AppDatabase.kt            Room-Datenbank, Singleton, Version
+|   |   +-- Migrations.kt             Liste der Migrationen (aktuell leer)
+|   +-- backup/
+|   |   +-- BackupData.kt             kompletter Datenbestand
+|   |   +-- BackupJson.kt             JSON schreiben, lesen, prüfen
+|   |   +-- CsvExporter.kt            CSV für Excel
+|   +-- settings/
+|   |   +-- AppSettings.kt            Hell/Dunkel-Wahl, Sicherungs-Erinnerung
+|   |   |                             (SharedPreferences)
+|   +-- model/
+|   |   +-- RoundWithScores.kt        Relation Runde -> Punkte
+|   |   +-- GameWithRounds.kt         Relation Spiel -> Runden -> Punkte
+|   |   +-- StatisticsSummary.kt      Ergebnis der Statistik-Abfrage
+|   |   +-- ScoreEntry.kt             Eingabe pro Spieler (UI -> Repository)
+|   +-- repository/
+|       +-- GameRepository.kt         zentrale Datenverwaltung
+|       +-- BackupRepository.kt       Schnappschuss und Wiederherstellung
+|
++-- util/
+|   +-- GameRules.kt                  Konstanten und Bonusregeln
+|   +-- PlayerColors.kt               7 feste Spielerfarben
+|   +-- Validation.kt                 Namensprüfung (Format)
+|   +-- GameCalculations.kt           Summen und Platzierungen
+|   +-- Formatting.kt                 Datum (de: dd.MM.yyyy, sonst lokal), Zahlen, Prozent
+|   +-- PlayerStatistics.kt           Spielerstatistik (rein rechnerisch, ohne DB)
+|   +-- BackupReminder.kt             Regel für die Sicherungs-Erinnerung
+|
++-- navigation/
+|   +-- NavRoutes.kt                  Routen und Argumente
+|   +-- AppNavigation.kt              Navigationsgraph
+|
++-- viewmodel/
+|   +-- HomeViewModel.kt
+|   +-- PlayerViewModel.kt
+|   +-- NewGameViewModel.kt
+|   +-- GameSetupViewModel.kt
+|   +-- ScoreEntryViewModel.kt
+|   +-- GameHistoryViewModel.kt
+|   +-- GameEndViewModel.kt
+|   +-- ResultViewModel.kt
+|   +-- StatisticsViewModel.kt
+|   +-- DataViewModel.kt
+|
++-- ui/
+    +-- components/
+    |   +-- PlayerColorDot.kt         farbiger Spielerpunkt
+    |   +-- BackButton.kt             gezeichneter Zurück-Pfeil (48 dp)
+    |   +-- ScreenPadding.kt          screenPadding(), ScreenLayout.TopExtra
+    |   +-- QwirkleStones.kt          gezeichnete Qwirkle-Steine (Logo der Startseite)
+    |   +-- RepositoryProvider.kt     rememberRepository()
+    |   +-- SettingsProvider.kt       rememberSettings()
+    |   +-- BackupProvider.kt         rememberBackupRepository()
+    |   +-- PlaceholderScreen.kt      nur Entwicklungshilfe, nicht mehr genutzt
+    +-- theme/
+    |   +-- Color.kt                  Markenfarben, playerColor()
+    |   +-- Theme.kt                  QwirkleTheme (hell/dunkel)
+    +-- screens/
+        +-- home/HomeScreen.kt
+        +-- players/PlayerManagementScreen.kt
+        +-- newgame/NewGameScreen.kt
+        +-- newgame/GameSetupScreen.kt
+        +-- scoring/ScoreEntryScreen.kt
+        +-- gameplay/GameHistoryScreen.kt
+        +-- gameplay/GameEndScreen.kt
+        +-- results/ResultScreen.kt
+        +-- statistics/StatisticsScreen.kt
+        +-- data/DataScreen.kt
+        +-- info/InfoScreen.kt
+
+Ressourcen (app/src/main/res):
+  values/strings.xml       englische Texte (Standard)
+  values-de/strings.xml    deutsche Texte
+  mipmap/ drawable/        adaptives App-Icon (sechs Qwirkle-Steine, 2x3, auf
+                           dunkelblauem Grund, plus einfarbige Variante)
+
+Hinweis: PlaceholderScreen.kt wird von keinem Bildschirm mehr verwendet und
+kann gelöscht werden. Die Vorlagen-Datei ui/theme/Type.kt wird nicht benutzt
+(es gilt die Standard-Typografie von Material 3) und kann bleiben oder
+entfernt werden.
+
+
+================================================================================
+6. DATENMODELL (ROOM)
+================================================================================
+
+6.1 Entity-Relationship-Übersicht
+---------------------------------
+
+  players 1 ---- n game_players n ---- 1 game_history 1 ---- n rounds
+     |                                                          |
+     |                                                          | 1
+     |                                                          |
+     |                        n                                 n
+     +----------------- round_scores ---------------------------+
+
+  - game_players verbindet Spieler mit Spielen (inkl. Reihenfolge).
+  - round_scores gehört zu genau einer Runde und genau einem Spieler.
+  - Löscht man ein Spiel, werden dessen Runden, Rundenpunkte und Teilnehmer
+    per CASCADE mitgelöscht.
+  - Spieler werden nie hart gelöscht (siehe players.isActive).
+
+6.2 Tabelle players  (Entity Player)
+------------------------------------
+  id          Long, Primärschlüssel, autoGenerate
+  name        String
+  colorIndex  Int          Index 0 bis 6 in PlayerColors
+  isActive    Boolean      true = sichtbar, false = "gelöscht" (Soft Delete)
+
+6.3 Tabelle game_history  (Entity GameHistory)
+----------------------------------------------
+  id                Long, Primärschlüssel, autoGenerate
+  date              Long        Startzeit in Millisekunden (Epoch)
+  playerCount       Int
+  totalPoints       Int         Summe ALLER Spieler inkl. Boni (erst nach
+                                finishGame gefüllt, vorher 0)
+  totalQwirkles     Int         Summe aller Qwirkles (erst nach finishGame)
+  isTestGame        Boolean     Testspiel, wird nicht in Statistik gezählt
+  isFinished        Boolean     false = läuft noch, true = gespeichert
+  endBonusPlayerId  Long?       Spieler mit Endspielbonus, null = niemand
+
+6.4 Tabelle game_players  (Entity GamePlayer)
+---------------------------------------------
+  id          Long, Primärschlüssel, autoGenerate
+  gameId      Long   -> game_history.id  (ON DELETE CASCADE, Index)
+  playerId    Long   -> players.id       (Index)
+  position    Int    Spielreihenfolge, beginnt bei 0
+
+6.5 Tabelle rounds  (Entity Round)
+----------------------------------
+  id           Long, Primärschlüssel, autoGenerate
+  gameId       Long   -> game_history.id  (ON DELETE CASCADE, Index)
+  roundNumber  Int    beginnt bei 1, fortlaufend pro Spiel
+
+6.6 Tabelle round_scores  (Entity RoundScore)
+---------------------------------------------
+  id        Long, Primärschlüssel, autoGenerate
+  roundId   Long   -> rounds.id   (ON DELETE CASCADE, Index)
+  playerId  Long   -> players.id  (Index)
+  points    Int    eingegebene Punkte OHNE Qwirkle-Bonus
+  qwirkles  Int    Anzahl Qwirkles in dieser Runde (0 bis 3 in der Oberfläche)
+
+WICHTIG: Der Qwirkle-Bonus wird NICHT gespeichert, sondern bei Bedarf über
+GameRules berechnet. Dadurch gibt es genau eine Stelle, an der die Regel steht.
+
+6.7 Relationen (Datenklassen in data/model)
+-------------------------------------------
+  RoundWithScores   @Embedded Round + @Relation List<RoundScore>
+  GameWithRounds    @Embedded GameHistory + @Relation List<RoundWithScores>
+  StatisticsSummary Ergebnisklasse der Statistik-Abfrage
+  ScoreEntry        (playerId, points, qwirkles) - Eingabe aus der UI
+
+6.8 Datenbank
+-------------
+  AppDatabase  DATABASE_VERSION = 1, exportSchema = true, Dateiname "qwirkle.db"
+  Entities     Player, GameHistory, GamePlayer, Round, RoundScore
+  Migrationen  .addMigrations(*Migrations.ALL)  (siehe Abschnitt 20)
+  Zugriff      AppDatabase.getInstance(context)  (thread-sicherer Singleton)
+
+
+================================================================================
+7. FACHREGELN UND BERECHNUNGEN
+================================================================================
+
+7.1 Konstanten (util/GameRules)
+-------------------------------
+  QWIRKLE_BONUS = 6      Punkte pro Qwirkle
+  END_BONUS     = 6      Endspielbonus
+  MIN_PLAYERS   = 2
+  MAX_PLAYERS   = 7
+
+7.2 Rundenpunkte
+----------------
+  roundTotal(points, qwirkles) = points + qwirkles * 6
+
+Beispiel: Anna gibt 18 Punkte ein und hat 2 Qwirkles.
+  Bonus       = 2 * 6 = 12
+  Rundenwert  = 18 + 12 = 30
+
+7.3 Gesamtpunkte eines Spielers (GameCalculations.playerTotals)
+---------------------------------------------------------------
+  Summe aller roundTotal-Werte des Spielers
+  + 6 (END_BONUS), falls er der Spieler mit dem Endspielbonus ist
+
+7.4 Platzierungen (GameCalculations.ranking)
+--------------------------------------------
+Absteigend nach Gesamtpunkten. Gleiche Punktzahl ergibt gleichen Rang
+(Beispiel: 1., 2., 2., 4.).
+
+7.5 Spielergebnis (GameRepository.finishGame)
+---------------------------------------------
+  totalPoints   = Summe aller roundTotal-Werte aller Spieler + Endspielbonus
+  totalQwirkles = Summe aller Qwirkles aller Spieler
+  isFinished    = true
+
+Hinweis: Die "Gesamtpunkte" eines Spiels sind die Summe ALLER Spieler (so
+sehen es auch die Wireframes für "Letztes Spiel" und "Langzeitstatistik" vor).
+Rekorde in der Statistik beziehen sich daher auf diese Spielsumme, nicht auf
+die Einzelleistung eines Spielers.
+
+7.6 Eingaberegeln der Punkteerfassung
+-------------------------------------
+  - Punktefeld: nur Ziffern, maximal 2 Stellen (0 bis 99; ältere Werte mit
+    3 Stellen bleiben les- und bearbeitbar)
+  - Alle Punktefelder sind mit 0 vorbelegt; "Runde speichern" ist daher
+    immer möglich (bis zum Laden im Bearbeiten-Modus gesperrt)
+  - Qwirkles: Zähler von 0 bis 3 pro Runde (Konstante MAX_QWIRKLES = 3)
+  - "Beenden" ist erst möglich, wenn mindestens eine Runde gespeichert ist
+
+7.7 Spielernamen
+----------------
+  - Leer oder nur Leerzeichen: nicht erlaubt (EMPTY)
+  - Maximal 20 Zeichen (TOO_LONG)
+  - Eindeutig unter den AKTIVEN Spielern, Groß-/Kleinschreibung egal
+    (DUPLICATE). Ein "gelöschter" Spieler blockiert seinen Namen nicht.
+  - Namen werden vor dem Speichern getrimmt.
+
+7.8 Farbvergabe
+---------------
+  7 feste Farben (Rot, Blau, Grün, Gelb, Lila, Orange, Türkis). Ein neuer
+  Spieler bekommt automatisch die erste Farbe, die kein aktiver Spieler hat.
+  Sind alle vergeben, wird reihum weitergezählt. Die Farbe ist beim Bearbeiten
+  änderbar. Mehrere Spieler dürfen dieselbe Farbe haben.
+
+7.9 Soft Delete von Spielern
+----------------------------
+"Spieler löschen" setzt isActive = false. So bleiben alte Spiele und die
+Statistik vollständig, und ein Spiel zeigt auch später noch die richtigen
+Namen. Gelöschte Spieler erscheinen nicht mehr in der Spielerverwaltung und
+nicht in der Auswahl für neue Spiele, wohl aber in bereits angelegten Spielen
+(GamePlayerDao fragt ohne isActive-Filter ab).
+
+
+================================================================================
+8. DATENZUGRIFF (DAOS UND REPOSITORY)
+================================================================================
+
+8.1 PlayerDao
+-------------
+  getActivePlayers(): Flow<List<Player>>      aktive, alphabetisch (NOCASE)
+  getActivePlayersOnce(): List<Player>        einmalige Abfrage (suspend)
+  getPlayersByIds(ids): List<Player>
+  getAllPlayersIncludingInactive(): Flow      auch deaktivierte
+  countActiveByName(name, excludeId): Int     Duplikatprüfung (NOCASE)
+  insert(player): Long
+  update(player)
+  deactivate(id)                              Soft Delete
+
+8.2 GameHistoryDao
+------------------
+  insert(game): Long
+  update(game)
+  deleteById(gameId)
+  deleteUnfinished()                          alle nicht beendeten Spiele
+  getUnfinishedGame(): Flow<GameHistory?>     neuestes laufendes Spiel
+  getGame(gameId): GameHistory?
+  getFinishedGames(): Flow<List<GameHistory>> beendet UND kein Testspiel,
+                                              neueste zuerst
+  getLastFinishedGame(): Flow<GameHistory?>   dito, nur das neueste
+  gameCount(): Flow<Int>                      beendet UND kein Testspiel
+  getGameWithRounds(gameId): Flow<GameWithRounds?>   (@Transaction)
+  getStatistics(): Flow<StatisticsSummary>
+  getFinishedGamesWithRounds()                beendete Nicht-Testspiele samt
+                                              Runden (Spielerstatistik)
+
+Die Statistik-Abfrage berücksichtigt ausschließlich Spiele mit
+isFinished = 1 und isTestGame = 0 und liefert: Anzahl, Summe Punkte, Summe
+Qwirkles, Durchschnitt Punkte, Durchschnitt Qwirkles, Maximum Punkte,
+Maximum Qwirkles (jeweils mit COALESCE, also 0 bei leerer Datenbank).
+
+8.3 GamePlayerDao  (abstract class)
+-----------------------------------
+  startGame(game, playerIds): Long           @Transaction: legt Spiel und alle
+                                             Teilnehmer atomar an
+  getPlayersOfGame(gameId): Flow<List<Player>>   nach position sortiert
+  getPlayersOfGameOnce(gameId): List<Player>
+  getParticipantsOfFinishedGames()           Teilnehmer beendeter Nicht-Testspiele
+
+8.4 RoundDao  (abstract class)
+------------------------------
+  saveRound(gameId, scores): Int             @Transaction: vergibt die nächste
+                                             Rundennummer (MAX + 1), legt die
+                                             Runde und alle Punkte atomar an
+  deleteRound(roundId)                       Punkte per CASCADE
+  getRound(roundId), getRoundWithScoresOnce(roundId)
+  updateRoundScores(roundId, scores)         @Transaction: ändert Punkte und
+                                             Qwirkles der bestehenden Zeilen
+                                             (Nummer und IDs bleiben); unbekannter
+                                             Spieler -> IllegalArgumentException,
+                                             nichts wird geändert
+  getRounds(gameId): Flow<List<Round>>
+  getRoundsWithScores(gameId): Flow<List<RoundWithScores>>  (@Transaction)
+
+8.5 RoundScoreDao
+-----------------
+  getScores(roundId): Flow<List<RoundScore>>
+  getScoresForGame(gameId): List<RoundScore>   über Join mit rounds
+
+8.6 GameRepository (öffentliche API)
+------------------------------------
+Spieler:
+  getPlayers(): Flow<List<Player>>
+  getAllPlayersIncludingInactive(): Flow<List<Player>>
+  getPlayersByIds(ids)
+  validateName(rawName, excludeId = 0): NameValidation
+  addPlayer(rawName): NameValidation           legt an, wenn VALID
+  updatePlayer(player, newName): NameValidation
+  changePlayerColor(player, colorIndex)
+  deletePlayer(playerId)                       Soft Delete
+
+Spiel:
+  startGame(playerIds, isTestGame): Long       löscht zuerst ein evtl. altes,
+                                               nicht beendetes Spiel; prüft
+                                               2 bis 7 Spieler (require)
+  getGamePlayers(gameId): Flow<List<Player>>
+  getGamePlayersOnce(gameId)
+  saveRound(gameId, entries: List<ScoreEntry>): Int
+  updateRound(roundId, entries)                ändert Punkte/Qwirkles; nur in
+                                               laufenden Spielen, sonst
+                                               IllegalStateException
+  getRoundWithScoresOnce(roundId)
+  deleteRound(roundId)
+  getRoundsWithScores(gameId)
+  getGameWithRounds(gameId)
+  getUnfinishedGame(): Flow<GameHistory?>
+  getGame(gameId): GameHistory?
+  setEndBonusPlayer(gameId, playerId?)         merkt den Endbonus-Spieler,
+                                               beendet das Spiel noch NICHT
+  finishGame(gameId, endBonusPlayerId?)        berechnet Summen, isFinished
+  discardGame(gameId)                          löscht Spiel samt Abhängigen
+  cleanUpUnfinishedGames()
+
+Historie und Statistik:
+  getFinishedGames(), getLastFinishedGame(), gameCount(), getStatistics(),
+  getPlayerStatistics(), deleteGame(gameId)
+
+
+================================================================================
+9. NAVIGATION
+================================================================================
+
+9.1 Routen (navigation/NavRoutes)
+---------------------------------
+  HOME        "home"
+  PLAYERS     "players"
+  NEWGAME     "newgame"
+  SETUP       "setup/{playerIds}/{testGame}"   Reihenfolge & Farben
+  STATISTICS  "statistics"
+  DATA        "data"
+  INFO        "info"
+  SCORING     "scoring/{gameId}"    Punkteerfassung
+  EDITROUND   "editround/{gameId}/{roundId}"   Runde bearbeiten
+  HISTORY     "history/{gameId}"    Spielverlauf
+  GAMEEND     "gameend/{gameId}"    Spielende (Endspielbonus)
+  RESULTS     "results/{gameId}"    Endauswertung
+
+Hilfsfunktionen: setup(ids, isTest), scoring(id), history(id), gameEnd(id),
+results(id). Das Argument gameId ist vom Typ Long (NavType.LongType);
+playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
+
+9.2 Navigationsgraph
+--------------------
+
+  HOME
+   |-- Spieler verwalten ----------------> PLAYERS
+   |-- Statistik ------------------------> STATISTICS
+   |-- Daten sichern & wiederherstellen --> DATA
+   |-- Info & Spielregeln ---------------> INFO
+   |-- Erinnerungskarte "Jetzt sichern" --> DATA
+   |-- Spiel fortsetzen (laufendes Spiel)-> HISTORY(id)
+   '-- Neues Spiel ----------------------> NEWGAME
+                                             |  Weiter
+                                             v
+                                         SETUP (Reihenfolge & Farben)
+                                             |  Los geht's (Spiel wird angelegt)
+                                             v
+                                         SCORING(id)  <------------+
+                                             |  Runde speichern    |
+                                             v                     | Runde
+                                         HISTORY(id) --------------+ hinzufügen
+                                             |  Beenden
+                                             v
+                                         GAMEEND(id)
+                                             |  Endauswertung anzeigen
+                                             v
+                                         RESULTS(id)
+                                             |  Speichern / Verwerfen
+                                             v
+                                           HOME
+
+  Zusätzlich: SCORING hat ebenfalls "Beenden" -> GAMEEND (ab Runde 2).
+  HISTORY -> EDITROUND(gameId, roundId) durch Antippen einer Rundenzeile;
+  nach "Änderung speichern" oder Zurück geht es per popBackStack zurück zu
+  HISTORY.
+  NEWGAME hat bei leerer Spielerliste einen Knopf -> PLAYERS.
+
+9.3 Rückstapel (Back Stack)
+---------------------------
+  - NEWGAME -> SETUP -> SCORING: beim Start wird NEWGAME (samt SETUP) per
+    popUpTo entfernt.
+  - SCORING -> HISTORY und HISTORY -> SCORING: der jeweils verlassene
+    Bildschirm wird per popUpTo entfernt. Der Stapel bleibt dadurch flach
+    (HOME -> aktueller Spielbildschirm).
+  - GAMEEND und RESULTS werden normal gestapelt. Die Zurück-Taste führt von
+    RESULTS zu GAMEEND (Endbonus kann geändert werden) und von GAMEEND zum
+    letzten Spielbildschirm.
+  - In SCORING und HISTORY führt "←" und die Systemtaste zum Startbildschirm
+    (goHome = popBackStack(HOME)). Das Spiel bleibt gespeichert.
+  - RESULTS -> HOME nach Speichern oder Verwerfen (goHome).
+
+
+================================================================================
+10. BILDSCHIRME
+================================================================================
+
+10.1 HomeScreen  (Wireframe 01)
+-------------------------------
+  - Logo: gezeichnete Qwirkle-Steine (QwirkleStones), Titel "Qwirkle Punktezähler"
+  - Karte "Laufendes Spiel" (nur wenn ein unfertiges Spiel existiert), Titel
+    mit Zusatz "(Testspiel)" bei Testspielen. Höchstens zwei Infozeilen:
+      "4 Spieler · 6 Runden gespielt"
+      "Führt: Anna (112) · Gesamt: 389"  (bei Gleichstand "Gleichstand (112)";
+      ohne Runde "Noch keine Runde")
+    Punkte ohne Endspielbonus; Namen werden auf 12 Zeichen gekürzt. Berechnung
+    in HomeViewModel.runningInfo (RunningGameInfo.of, getestet). Knöpfe "Spiel
+    fortsetzen" und "Verwerfen" (mit Abfrage)
+  - Karte "Letztes Spiel": Datum, Gesamtpunkte, Qwirkles
+    (letztes beendetes Nicht-Testspiel) oder Hinweis "Noch kein Spiel".
+    Darunter, zentriert als grüne Plakette hervorgehoben: "Gespielte Partien: N"
+    (feste Farben GamesChip* in Color.kt, für Hell und Dunkel).
+  - Karte "Sicherung empfohlen" (nur bei Bedarf, siehe 10.12): Knöpfe "Jetzt
+    sichern" (-> DATA) und "Später" (blendet sie 7 Tage aus).
+  - Fußzeile (dicht beieinander): "Info & Spielregeln" (-> INFO), "Version x",
+    "Entwickelt von <Name>". Der Wikipedia-Link steht nur noch auf der
+    Info-Seite.
+  - Knöpfe: Neues Spiel, Statistik, Spieler verwalten, Daten sichern &
+    wiederherstellen
+  - Schalter "Dunkles Design": nur wirksam, wenn das System hell ist. Ist das
+    System dunkel, ist die App immer dunkel (der Schalter ist dann ohne
+    Wirkung). Die Wahl wird in AppSettings gespeichert.
+  - Wenn ein laufendes Spiel existiert, fragt "Neues Spiel" vorher nach, weil
+    das laufende Spiel verworfen wird.
+  - Layout: 28 dp eigener Abstand oben (plus 12 dp zentral, siehe Abschnitt 13), 20 dp zwischen den Elementen, größere Schrift
+    (headlineLarge, titleLarge in Karten), Hauptknöpfe 56 dp hoch; die Seite
+    ist scrollbar.
+  - Version: "Version x" (versionName aus dem
+    PackageManager, Rückfall "1.0"), "Entwickelt von <Name>" (Text
+    author_name in res/values/strings.xml, nicht übersetzbar)
+
+10.2 PlayerManagementScreen  (Wireframe 02)
+-------------------------------------------
+  - Liste der aktiven Spieler (alphabetisch) mit Farbpunkt
+  - "+ Neuen Spieler hinzufügen": Dialog nur mit Name, Farbe automatisch
+  - "Bearbeiten": Dialog mit Name und Farbauswahl (7 Farben)
+  - "Löschen": Sicherheitsabfrage, danach Soft Delete
+  - Fehlermeldungen im Dialog: "Bitte einen Namen eingeben.",
+    "Maximal 20 Zeichen.", "Diesen Namen gibt es schon."
+
+10.3 NewGameScreen  (Wireframe 03)
+----------------------------------
+  - Checkbox-Liste aller aktiven Spieler mit Farbpunkt
+  - Anzeige "Ausgewählt: X von 7"; bei 7 sind weitere Spieler gesperrt
+  - Spielreihenfolge = Reihenfolge, in der die Spieler angetippt wurden
+  - Checkbox "Als Testspiel markieren" (nicht in Statistik)
+  - "Weiter" ab 2 Spielern aktiv; öffnet SETUP (10.3a). Das Spiel wird noch
+    nicht angelegt.
+  - Ohne Spieler: Hinweistext und Knopf "Spieler verwalten"
+
+10.3a GameSetupScreen  "Reihenfolge & Farben"
+---------------------------------------------
+  Erscheint nach "Weiter" im NewGameScreen und vor der ersten Runde.
+  - Liste der gewählten Spieler in Spielreihenfolge: Nummer, Farbpunkt, Name,
+    Pfeile nach oben/unten (mit Canvas gezeichnet; Drag & Drop ist eine
+    mögliche spätere Erweiterung).
+  - Beim Öffnen werden doppelte Farben automatisch ersetzt (erste Verwendung
+    bleibt, weitere bekommen eine freie Farbe; bei höchstens 7 Spielern gibt
+    es immer genug). Ein Hinweis zeigt, dass das passiert ist.
+  - Antippen des Farbpunkts öffnet die Farbauswahl. Ist die gewählte Farbe
+    schon an einen anderen Spieler im Spiel vergeben, tauschen beide ihre
+    Farben; so kommt keine Farbe doppelt vor.
+  - "Los geht's": speichert geänderte Farben DAUERHAFT am Spieler
+    (changePlayerColor; keine Schemaänderung, keine Migration), legt das Spiel
+    mit der gewählten Reihenfolge an (startGame) und öffnet SCORING. NEWGAME
+    und SETUP werden vom Rückstapel entfernt.
+  - Zurück führt zu NEWGAME; die Auswahl dort bleibt erhalten.
+  - Spieler, die nicht im Spiel sind, behalten ihre Farbe; in der
+    Spielerverwaltung dürfen weiterhin mehrere Spieler dieselbe Farbe haben.
+
+10.4 ScoreEntryScreen  (Wireframe 04)
+-------------------------------------
+  - Kopf: Zurück-Pfeil und "Runde N"
+  - Spaltenüberschriften "Punkte" und "Qwirkles"
+  - Pro Spieler eine Zeile (Karte): Farbpunkt + Name (einzeilig, bei Platzmangel
+    gekürzt), Punkte-Knopf (72 dp, startet mit 0), Qwirkle-Zähler (− Zahl +,
+    höchstens 3 pro Runde, MAX_QWIRKLES) mit Bonus darunter ("+12")
+  - Punkteingabe: Antippen des Punkte-Knopfs öffnet einen Dialog mit einem
+    Zahlenrad von 0 bis 20 (drehen oder Zahl antippen, Einrasten in der Mitte).
+    "Tastatur" schaltet auf Zahleneingabe um (bis 2 Stellen, für Werte über 20;
+    ein Hinweis im Rad-Modus nennt das; ist der aktuelle Wert größer als 20, öffnet der Dialog gleich mit der
+    Tastatur), "Rad" schaltet zurück. "OK" übernimmt, "Abbrechen" verwirft.
+  - Karten und Knöpfe liegen in einer gemeinsamen scrollbaren Liste. Am Ende:
+    Hinweis "Punkte bitte ohne Qwirkle-Bonus eintragen ...", "Runde speichern"
+    und "Beenden" (erst ab einer gespeicherten Runde aktiv)
+  - Bearbeiten-Modus (roundId gesetzt, Aufruf aus dem Spielverlauf): derselbe
+    Bildschirm, Titel "Runde N bearbeiten", die gespeicherten Punkte und
+    Qwirkles der Runde sind vorbelegt, Knopf "Änderung speichern"; "Beenden"
+    entfällt. Bis die Werte geladen sind, ist Speichern gesperrt. Es lassen
+    sich nur Punkte und Qwirkles ändern; Löschen einer Runde in der Mitte gibt
+    es bewusst nicht (nur "Letzte Runde löschen"). Nur in laufenden Spielen:
+    Das Repository (updateRound) lehnt Änderungen an gespeicherten Spielen mit
+    IllegalStateException ab, damit sich Statistik und Rekorde nicht
+    nachträglich verschieben.
+  - Alle Punktewerte sind mit 0 vorbelegt, "Runde speichern" ist daher immer
+    möglich. Wer nichts ändert, speichert 0 Punkte und 0 Qwirkles.
+  - Nach dem Speichern: HISTORY
+  - Ist noch keine Runde gespeichert, steht unter "Beenden" ein Hinweis, warum
+    der Knopf gesperrt ist.
+
+10.5 GameHistoryScreen  (Wireframe 05)
+--------------------------------------
+  - Tabelle mit Spaltenkopf (Farbpunkt + Name), Zeile "SUMME" und einer
+    Zeile pro Runde. Kopf und Summenzeile bleiben immer sichtbar, nur die
+    Runden scrollen. Bei neuer Runde wird automatisch nach unten gescrollt.
+  - Ab 5 Spielern zeigt die Kopfzeile nur Farbpunkt und die ersten zwei
+    Buchstaben des Namens (der volle Name steht als Beschreibung für
+    Screenreader). Bei gleichen Anfangsbuchstaben hilft der Farbpunkt.
+  - Ein ★ hinter dem Wert kennzeichnet Runden mit Qwirkle (Bonus ist im Wert
+    enthalten).
+  - Eine Rundenzeile antippen öffnet die Bearbeitung dieser Runde (EDITROUND,
+    siehe 10.4). Die Summenzeile ist nicht antippbar.
+  - Unten: "Runde hinzufügen" -> SCORING, darunter in einer Zeile
+    "Letzte Runde löschen" (mit Sicherheitsabfrage, nur die letzte Runde) und
+    "Beenden" -> GAMEEND (erst ab einer Runde). Solange keine Runde
+    gespeichert ist, steht darunter der Hinweis, dass Beenden erst nach
+    einer gespeicherten Runde möglich ist (gilt auch in 10.4).
+
+10.6 GameEndScreen  (Wireframe 06)
+----------------------------------
+  - "Wer hat den letzten Stein gelegt?" als Auswahlliste (Radio-Buttons),
+    zusätzlich "Niemand (kein Endspielbonus)"
+  - Auswahl ist Pflicht (Knopf deaktiviert, bis gewählt wurde)
+  - Bei Spielerwahl Anzeige "Bonus +6 Punkte"
+  - "Endauswertung anzeigen": speichert die Wahl (setEndBonusPlayer) und
+    öffnet RESULTS
+  - Kommt man aus RESULTS zurück, ist eine frühere Spielerwahl vorausgewählt.
+
+10.7 ResultScreen  (Wireframe 07)
+---------------------------------
+  - Hinweis bei Testspiel
+  - Platzierungen: "1. ● Name  148 Punkte" (Gesamtpunkte inkl. aller Boni,
+    Platz 1 fett, gleiche Punkte = gleicher Rang)
+  - Qwirkle-Balkendiagramm (Balken in der Spielerfarbe, Länge relativ zum
+    Maximum; ohne Qwirkles Hinweistext)
+  - "Spiel speichern": finishGame -> Statistik, danach HOME
+  - "Spiel verwerfen": Sicherheitsabfrage, discardGame, danach HOME
+
+10.8 StatisticsScreen  (Wireframe 08)
+-------------------------------------
+  Reihenfolge von oben nach unten:
+  1. Kennzahlen: Partien, Punkte, Qwirkles, Ø Punkte, Ø Qwirkles
+     (eine Nachkommastelle, Format nach Geräte-Sprache)
+  2. Rekorde (Karte, nur wenn es gespeicherte Partien gibt): höchste
+     Punktzahl, meiste Qwirkles (jeweils pro Spiel)
+  3. Abschnitt "Spieler": eine Karte pro aktivem Spieler mit mindestens einer
+     gespeicherten Partie: Farbpunkt + Name, Gespielte Partien, Siege (Anzahl
+     und Quote), Ø Punkte, Bestwert (beste Partie), Qwirkles gesamt (und Ø pro
+     Partie). Gelöschte (deaktivierte) Spieler werden nicht angezeigt.
+     Berechnung siehe Abschnitt 10.10.
+  4. Liste aller gespeicherten Spiele: "Datum | Punkte Pkt", Spieleranzahl
+     und Qwirkles, Knopf "Löschen" mit Sicherheitsabfrage
+  Testspiele sind nie enthalten.
+
+10.9 DataScreen  "Daten & Sicherung"
+------------------------------------
+  Erreichbar über die Startseite. Drei Karten:
+  - Sicherung (JSON): "Sicherung speichern" öffnet den Android-Dateidialog
+    (CreateDocument), Vorschlag qwirkle-backup-JJJJ-MM-TT.json.
+  - Export für Excel (CSV): "CSV exportieren", Vorschlag
+    qwirkle-games-JJJJ-MM-TT.csv. Nur Export, kein Import.
+  - Sicherung einspielen: Sicherheitsabfrage, danach Dateiauswahl
+    (OpenDocument). Ersetzt ALLE vorhandenen Daten.
+  - Während eines Vorgangs läuft ein Fortschrittsbalken, die Knöpfe sind
+    gesperrt. Das Ergebnis erscheint als Statuskarte (grün bei Erfolg, rot
+    bei Fehler) mit verständlichem Text. Details siehe Abschnitt 21.
+
+
+10.10 Spielerstatistik (util/PlayerStatistics)
+----------------------------------------------
+  Reine Rechenfunktion compute(players, games, participants) -> List<PlayerStats>.
+  Das Repository (GameRepository.getPlayerStatistics) kombiniert dafür drei
+  Datenströme: alle Spieler (auch inaktive), alle gespeicherten Nicht-
+  Testspiele mit Runden (GameHistoryDao.getFinishedGamesWithRounds) und deren
+  Teilnehmer (GamePlayerDao.getParticipantsOfFinishedGames). Es ändert sich
+  nichts am Datenbankschema (keine Migration nötig).
+  Regeln:
+    - Punkte einer Partie = Rundenpunkte inkl. Qwirkle-Boni + Endspielbonus.
+    - Sieg = Platz 1. Bei Punktgleichstand an der Spitze zählt der Sieg für
+      alle Beteiligten.
+    - Inaktive Spieler nehmen am Ranking alter Partien teil, erscheinen aber
+      nicht in der Ausgabe.
+    - Partien ohne Runden werden übersprungen.
+    - Sortierung: Siege, Siegquote, Ø Punkte (absteigend), dann Name.
+  PlayerStats: player, games, wins, totalPoints, bestPoints, totalQwirkles;
+  abgeleitet: winRate, averagePoints, averageQwirkles.
+
+
+10.11 InfoScreen  "Info & Spielregeln"
+---------------------------------------
+  Erreichbar über die Startseite. Eine scrollbare Seite mit Karten:
+  - Über die App: Name, Version, Autor, kurze Beschreibung.
+  - Deine Daten: Alle Daten bleiben auf dem Gerät, nichts wird ins Internet
+    gesendet, keine Anmeldung; Hinweis auf die Sicherungsfunktion.
+  - Spielregeln (Kurzfassung, eigene Formulierung): Spielmaterial, Zug,
+    Punkte (inkl. Qwirkle), Spielende; Abschnitt "In dieser App" (Punkte ohne
+    Bonus eintragen, App addiert 6 je Qwirkle, Endbonus beim Beenden, Spiel
+    für 2 bis 4 Spieler, App erlaubt bis zu 7); Link zu Wikipedia (Ressource wikipedia_url: deutsche Seite bei deutscher
+    Systemsprache, sonst englische; öffnet den Browser, keine Berechtigung
+    nötig); Hinweis,
+    dass die App unabhängig ist und nicht mit den Rechteinhabern verbunden.
+  - Lizenzen: Android Jetpack und Material Design (Apache License 2.0).
+  Alle Texte stehen in den Ressourcen (de/en).
+
+10.12 Sicherungs-Erinnerung (util/BackupReminder)
+-------------------------------------------------
+  Reine Funktion shouldRemind(now, lastBackupAt, gamesAtBackup, gameCount,
+  snoozedUntil). Die Startseite zeigt die Karte, wenn
+    - mindestens eine gespeicherte Partie existiert und
+    - die Erinnerung nicht per "Später" ausgeblendet ist und
+    - entweder noch nie gesichert wurde, oder seit der letzten Sicherung
+      mindestens 5 neue Partien dazugekommen sind, oder die Sicherung
+      mindestens 30 Tage alt ist und es neue Partien gibt.
+  AppSettings speichert lastBackupAt, gamesAtBackup und backupSnoozedUntil.
+  Eine erfolgreiche JSON-Sicherung oder Wiederherstellung ruft
+  recordBackup(...) auf (zählt gespeicherte Nicht-Testspiele). CSV-Export
+  zählt nicht als Sicherung. Die Schwellen stehen als Konstanten im Objekt
+  BackupReminder.
+
+
+================================================================================
+11. VIEWMODELS
+================================================================================
+
+Alle ViewModels erhalten das GameRepository bzw. BackupRepository (und ggf. die gameId) im
+Konstruktor und besitzen eine Factory in ihrem companion object. Zustände
+werden als StateFlow bereitgestellt (stateIn mit WhileSubscribed(5000)).
+
+  HomeViewModel
+    lastGame, gameCount, unfinishedGame           StateFlows
+    discardUnfinishedGame()
+
+  PlayerViewModel
+    players                                       aktive Spieler
+    addPlayer(name, onResult)
+    editPlayer(player, newName, colorIndex, onResult)
+    deletePlayer(player)
+
+  NewGameViewModel
+    players, selectedIds (List<Long>, Reihenfolge = Spielreihenfolge),
+    isTestGame
+    togglePlayer(id), setTestGame(value),
+    continueToSetup(onNext)   prüft die Auswahl, legt noch kein Spiel an
+
+  GameSetupViewModel(playerIds, isTestGame)
+    entries (List<SetupEntry(player, colorIndex)>), isLoading,
+    colorsAdjusted, isStarting
+    moveUp(index), moveDown(index), setColor(playerId, colorIndex) (tauscht
+    bei belegter Farbe), start(onStarted)
+    uniqueColors(colors)      reine Funktion im companion object (getestet)
+
+  ScoreEntryViewModel(gameId, roundId = null)
+    players, roundCount, inputs (Map<Long, ScoreInput>), isSaving
+    setPoints(playerId, text), changeQwirkles(playerId, delta),
+    save(onSaved)  (neue Runde oder, mit roundId, Änderung der Runde)
+    isEditing, isLoading, editedRoundNumber (Bearbeiten-Modus)
+    Konstanten: MAX_POINT_DIGITS = 2, MAX_QWIRKLES = 3
+    Datenklasse: ScoreInput(points: String, qwirkles: Int)
+
+  GameHistoryViewModel(gameId)
+    players, rounds
+    deleteLastRound()
+
+  GameEndViewModel(gameId)
+    players, choice (null = nichts gewählt, NO_BONUS = -1 = niemand,
+    sonst Spieler-ID)
+    select(id), confirm(onDone)
+
+  ResultViewModel(gameId)
+    state: ResultState(game, ranking)
+    save(onDone), discard(onDone)
+
+  StatisticsViewModel
+    stats, games, playerStats
+    deleteGame(gameId)
+
+  DataViewModel(BackupRepository, AppSettings)
+    status (DataStatus?), isBusy
+    exportJson(open), exportCsv(labels, delimiter, open),
+    importBackup(open), clearStatus()
+    Eine erfolgreiche JSON-Sicherung/Wiederherstellung merkt Zeitpunkt und
+    Partienzahl in AppSettings (Sicherungs-Erinnerung, Abschnitt 10.12).
+    DataStatus: ExportDone | ImportDone(players, games) | Failed(DataError)
+    DataError: WRITE, READ, NOT_A_BACKUP, NEWER_VERSION, INCONSISTENT,
+    TOO_LARGE, UNKNOWN
+    Dateizugriff läuft auf Dispatchers.IO; die Streams kommen als Lambda vom
+    Screen (contentResolver), damit das ViewModel keinen Context hält.
+
+Hinweis: Zustand, der eine Konfigurationsänderung überleben soll (z. B. die
+eingegebenen Punkte), liegt im ViewModel. Rein visueller Dialogzustand
+(z. B. "Dialog offen") liegt im Composable.
+
+
+================================================================================
+12. SPIELABLAUF (ENDE-ZU-ENDE)
+================================================================================
+
+  1. Spieler anlegen (PlayerManagementScreen).
+  2. Neues Spiel: 2 bis 7 Spieler auswählen, optional Testspiel, starten.
+     -> game_history (isFinished = false) + game_players werden angelegt.
+     -> Ein eventuell vorhandenes altes, unfertiges Spiel wird gelöscht.
+  3. Punkteerfassung: für alle Spieler Punkte und Qwirkles eintragen,
+     "Runde speichern". -> rounds + round_scores (atomar).
+  4. Spielverlauf: Tabelle prüfen, weitere Runden hinzufügen (Schritt 3 und 4
+     wechseln sich ab), einzelne Runden antippen und Punkte/Qwirkles ändern
+     oder die letzte Runde löschen.
+  5. Beenden: Spielende-Bildschirm, Endspielbonus-Spieler wählen.
+     -> game_history.endBonusPlayerId wird gesetzt.
+  6. Endauswertung: Platzierungen und Diagramm ansehen. Die Summen werden
+     live berechnet.
+  7. "Spiel speichern": finishGame schreibt totalPoints, totalQwirkles und
+     isFinished = true. Nicht-Testspiele erscheinen ab jetzt in Letztes Spiel,
+     Spieleliste und Statistik.
+     Alternativ "Spiel verwerfen": das Spiel wird komplett gelöscht.
+
+Unterbrechung: Verlässt man ein laufendes Spiel (Zurück, App schließen), bleibt
+es mit isFinished = false in der Datenbank. Die Startseite bietet "Spiel
+fortsetzen" an, das zum Spielverlauf führt.
+
+
+================================================================================
+13. DESIGN UND THEME
+================================================================================
+
+  - Material 3 mit festen Markenfarben, keine dynamischen Farben.
+  - QwirkleTheme(darkTheme) in ui/theme/Theme.kt. MainActivity bestimmt:
+        darkTheme = isSystemInDarkTheme() || AppSettings.darkModePreferred
+    Systemdesign dunkel -> immer dunkel. Systemdesign hell -> Wahl des Nutzers
+    (Schalter auf der Startseite, Standard: hell).
+  - Edge-to-Edge: enableEdgeToEdge() in MainActivity; ein SideEffect im Theme
+    setzt die Helligkeit der Symbole in Status- und Navigationsleiste passend
+    zum Design (dunkle Symbole auf hellem Grund und umgekehrt).
+  - Markenfarben: Blau (primary), Orange (secondary), Grün (tertiary), je
+    eine helle Variante für den Dunkelmodus (Color.kt).
+  - Spielerfarben: PlayerColors.argb(index) bzw. playerColor(index) als
+    Compose-Color. Die 7 Farben sind fest (siehe Abschnitt 7.8).
+  - Jeder Bildschirm nutzt Surface + Modifier.screenPadding() (ui/components/
+    ScreenPadding.kt): safeDrawingPadding() plus ScreenLayout.TopExtra (12 dp)
+    zusätzlich oben. Den Abstand zum oberen Rand ändert man zentral über
+    ScreenLayout.TopExtra. Die Startseite hat zusätzlich eigenen Abstand oben.
+  - Es werden keine Icon-Bibliotheken verwendet. Der Zurück-Pfeil (BackButton)
+    wird mit Canvas gezeichnet, weil das Textzeichen "←" auf manchen Geräten
+    zu klein oder gar nicht dargestellt wurde. Weitere Symbole sind
+    Textzeichen (−, +, ★).
+  - Lokalisierung: Alle sichtbaren Texte stehen in Ressourcen.
+        res/values/strings.xml      Englisch (Standard)
+        res/values-de/strings.xml   Deutsch
+    Ist die Systemsprache Deutsch, erscheint die App deutsch, bei jeder
+    anderen Sprache englisch. Eine eigene Sprachauswahl in der App gibt es
+    nicht. Der Name "author_name" ist translatable="false".
+    Datumsformat: Deutsch TT.MM.JJJJ, sonst das lokale Format
+    (DateFormat.MEDIUM). Zahlen folgen der Geräte-Sprache.
+  - App-Icon: adaptives Icon (Vordergrund: sechs Qwirkle-Steine in 2x3,
+    Hintergrund: dunkles Blau) mit einfarbiger Variante für Themed Icons.
+
+
+================================================================================
+14. KONVENTIONEN
+================================================================================
+
+  Namensgebung
+    - Entities: Substantiv im Singular (Player, Round, RoundScore)
+    - Tabellennamen: snake_case, Plural (players, round_scores)
+    - Spaltennamen: camelCase wie die Kotlin-Properties
+    - Screens: <Name>Screen, ViewModels: <Name>ViewModel
+    - Routen: Konstanten in NavRoutes, Aufbau mit Hilfsfunktionen
+
+  Struktur
+    - Ein Screen pro Datei, private Hilfs-Composables in derselben Datei
+    - Screens bekommen Navigationsaktionen als Lambdas (onBack, onFinish, ...)
+      und kennen den NavController nicht
+    - Datenbankzugriff ausschließlich über das Repository, nie direkt aus der
+      UI oder dem ViewModel an den DAOs vorbei
+    - Mehrere zusammengehörige Schreibvorgänge laufen in einer @Transaction
+      (RoundDao.saveRound, GamePlayerDao.startGame)
+
+  Kotlin / Compose
+    - Flows werden im ViewModel mit stateIn zu StateFlow gemacht und im
+      Composable mit collectAsState() gelesen
+    - Standard-Typografie von Material 3 über MaterialTheme.typography
+    - Geldeinheit: keine; Punkte sind Int
+
+
+================================================================================
+15. GETROFFENE ENTSCHEIDUNGEN
+================================================================================
+
+  Entscheidung                              Wahl
+  ----------------------------------------  ----------------------------------
+  Datenschicht                              Mittelweg: schlanke Entities, aber
+                                            mit Relationen und Statistikmodell
+  Qwirkle-Bonus                             Spieler gibt Punkte ohne Bonus ein,
+                                            die App addiert 6 pro Qwirkle
+  Dependency Injection                      Manuell über die Application-Klasse
+  Punkteerfassung                           Alle Spieler untereinander auf
+                                            einem Bildschirm
+  Laufendes Spiel verlassen                 Spiel bleibt gespeichert, Startseite
+                                            bietet "Spiel fortsetzen"
+  Punktefelder                              Mit 0 vorbelegt (früher: alle
+                                            Felder mussten ausgefüllt werden)
+  Punkteingabe                              Zahlenrad 0-20 im Dialog, dazu
+                                            Umschalter auf die Tastatur
+                                            (bis 2 Stellen, also max. 99)
+  Reihenfolge und Farben vor Spielstart     Eigener Bildschirm, Pfeile statt
+                                            Drag & Drop; Spiel wird erst danach
+                                            angelegt; Farben im Spiel eindeutig
+                                            (Tausch), dauerhaft am Spieler
+                                            gespeichert
+  Startseite                                Gespielte Partien in der Karte
+                                            Letztes Spiel (grün, zentriert);
+                                            Wikipedia-Link nur auf der Info-Seite
+  Sicherungs-Erinnerung                     Karte auf der Startseite: nie
+                                            gesichert, 5 neue Partien oder
+                                            30 Tage; "Später" = 7 Tage
+  Info-Seite                                Über, Datenschutz-Hinweis,
+                                            Spielregeln (Kurzfassung),
+                                            Lizenzen
+  Qwirkles pro Runde                        höchstens 3
+  Runden nachträglich ändern                Nur Punkte/Qwirkles, nur im
+                                            laufenden Spiel, kein Löschen
+                                            in der Mitte
+  Spielverlauf ab 5 Spielern                Kürzel (2 Buchstaben) im Kopf
+  Spielerstatistik                          Siege/Quote, Ø und Bestwert,
+                                            Qwirkles; auf dem Statistik-
+                                            Bildschirm; Gelöschte ausgeblendet
+  Logo und Icon                             Qwirkle-Steine statt Farbpunkten
+  Hell/Dunkel                               System dunkel -> immer dunkel,
+                                            System hell -> Schalter
+  Sprache                                   Deutsch nur bei deutscher
+                                            Systemsprache, sonst Englisch
+  Export-Format                             JSON (komplette Sicherung) und
+                                            CSV (Auswertung in Excel)
+  Import                                    Nur JSON, ersetzt alle Daten
+                                            (mit Sicherheitsabfrage)
+
+  Technische Entscheidungen der Umsetzung:
+  - Room 2.x statt Room 3, um Imports und Code stabil zu halten.
+  - Spieler per Soft Delete, damit Historie und Statistik erhalten bleiben.
+  - Teilnehmer eines Spiels in eigener Tabelle game_players (inkl.
+    Reihenfolge), damit ein Spiel nach App-Neustart fortgesetzt werden kann.
+  - Bonus wird berechnet statt gespeichert (eine Quelle der Wahrheit).
+  - Nur ein laufendes Spiel gleichzeitig.
+  - Spielende-Auswahl als Radio-Liste statt Dropdown (bessere Touch-Bedienung
+    und kein experimentelles API).
+  - Keine Material-Icons (keine zusätzliche Abhängigkeit).
+  - Import ersetzt alle Daten atomar in einer Transaktion statt zu mischen
+    (keine ID-Konflikte, bei Fehlern bleibt alles unverändert).
+  - JSON mit org.json statt zusätzlicher Bibliothek (kein neuer
+    Abhängigkeitsaufwand), eigene Formatversion im Dateikopf.
+  - Schema-Export mit dem Room-Gradle-Plugin, damit Migrationstests die alte
+    Datenbank aus der Schema-Datei erzeugen können.
+
+
+================================================================================
+16. BEKANNTE EINSCHRÄNKUNGEN
+================================================================================
+
+  - Datenbank: Version 1. Migrationen sind eingerichtet, aber noch keine
+    geschrieben. Jede Schemaänderung braucht Versionserhöhung, Migration und
+    Test (Abschnitt 20).
+  - Import ersetzt immer alle Daten; es gibt kein Zusammenführen von
+    Sicherungen. Die CSV-Datei kann nicht importiert werden.
+  - Es gibt keine automatische Sicherung; der Nutzer muss sie selbst anlegen.
+    Android-Auto-Backup ist nicht gesondert konfiguriert.
+  - Die allgemeine Statistik und die Rekorde beziehen sich auf die Spielsumme
+    aller Spieler. Die Spielerstatistik zeigt keine gelöschten Spieler und
+    keine Verläufe oder Direktvergleiche.
+  - Es gibt genau ein laufendes Spiel. Ein neues Spiel ersetzt das alte.
+  - Gelöscht werden kann nur die letzte Runde. Einzelne Runden lassen sich
+    in einem laufenden Spiel bearbeiten (Punkte, Qwirkles), aber nicht mehr in
+    einem schon gespeicherten Spiel.
+  - Die Reihenfolge lässt sich nur per Pfeile ändern (kein Drag & Drop) und
+    nur vor dem Spielstart.
+  - Eine Spielunterbrechung wird erst nach der ersten gespeicherten Runde
+    inhaltlich sinnvoll: "Beenden" ist vorher gesperrt, ein leeres Spiel lässt
+    sich nur über "Verwerfen" auf der Startseite entfernen.
+  - Der Spielverlauf teilt die Breite gleichmäßig auf. Ab 5 Spielern zeigt
+    die Kopfzeile nur Farbpunkt und zwei Buchstaben; bei gleichen
+    Anfangsbuchstaben hilft der Farbpunkt.
+  - Nur Hochformat getestet/ausgelegt; Querformat und Tablets sind nicht
+    gesondert gestaltet.
+  - Nur zwei Sprachen (Deutsch, Englisch). Keine Sprachwahl in der App.
+  - Der Schalter für das dunkle Design wirkt nur bei hellem Systemdesign.
+  - ViewModels und Compose-Oberflächen haben noch keine automatischen Tests
+    (siehe Abschnitt 19).
+  - Die Standard-Typografie des Projekts wird verwendet; Type.kt der Vorlage
+    ist ungenutzt.
+
+
+================================================================================
+17. WEITERENTWICKLUNG (ROADMAP)
+================================================================================
+
+Erledigt seit Version 1.0: Unit- und Room-Tests, Feinschliff (Icon,
+Lokalisierung, Statusleiste, Theme-Schalter), Migrations-Grundlage,
+Export/Import.
+
+  Offen: Tests
+    - ViewModel-Tests für Eingabelogik (ScoreEntryViewModel); benötigt
+      kotlinx-coroutines-test
+    - UI-Tests (Compose) für den Spielablauf
+
+  Offen: Feinschliff
+    - Barrierefreiheit (Inhaltsbeschreibungen, Kontraste, Schriftgrößen)
+    - Querformat und große Bildschirme
+    - Entfernen ungenutzter Dateien (PlaceholderScreen, Type.kt)
+
+  Erledigt seit 2.0: Spielerstatistik (Siege, Ø und Bestwert, Qwirkles),
+  Bearbeiten einzelner Runden, Kürzel im Spielverlauf ab 5 Spielern.
+
+  Erledigt seit 2.8: Sicherungs-Erinnerung, Hinweis bei gesperrtem "Beenden",
+  Info-Seite mit Spielregeln.
+
+  Erledigt seit 2.6: Startseite überarbeitet (Abstände, Wikipedia-Link,
+  Partien-Plakette), Punkteingabe (Rad 0-20, max. 2 Stellen), Reihenfolge
+  und Farben vor dem Spielstart.
+
+  Mögliche Erweiterungen
+    - Spielerstatistik erweitern (Direktvergleich, Verlauf, Rundenwerte)
+    - Bearbeiten auch in gespeicherten Spielen (Gesamtpunkte neu berechnen)
+    - Zusammenführen statt Ersetzen beim Import
+    - Automatische Sicherung / Teilen der Sicherung über das Share-Menü
+    - Reihenfolge per Drag & Drop statt Pfeile
+
+
+================================================================================
+18. GLOSSAR
+================================================================================
+
+  Qwirkle            Eine Reihe aus sechs Steinen derselben Farbe oder Form;
+                     bringt 6 Bonuspunkte.
+  Endspielbonus      6 Punkte für den Spieler, der den letzten Stein legt.
+  Runde              Ein Durchgang, in dem für jeden Spieler Punkte erfasst
+                     werden.
+  Testspiel          Spiel, das nicht in Statistik und Historie zählt.
+  Laufendes Spiel    Spiel mit isFinished = false (nicht gespeichert).
+  Soft Delete        "Löschen" durch Deaktivieren (isActive = false).
+  DAO                Data Access Object, Room-Schnittstelle für SQL.
+  Flow / StateFlow   Kotlin-Datenströme, die bei Datenänderungen neue Werte
+                     liefern.
+  KSP                Kotlin Symbol Processing, erzeugt den Room-Code beim
+                     Build.
+  DI                 Dependency Injection, hier manuell in QwirkleApp.
+  Migration          Skript, das eine Datenbank von Version n auf n+1 hebt,
+                     ohne Daten zu verlieren.
+  Schema-Datei       JSON-Beschreibung einer Datenbankversion (app/schemas).
+  SAF                Storage Access Framework: der Android-Dateidialog zum
+                     Speichern und Öffnen von Dateien.
+  BOM                Byte-Order-Mark am Dateianfang; sorgt dafür, dass Excel
+                     eine CSV-Datei als UTF-8 liest.
+
+
+================================================================================
+19. TESTS
+================================================================================
+
+19.1 Unit-Tests (src/test, laufen auf dem Entwicklungsrechner)
+--------------------------------------------------------------
+  GameRulesTest, GameCalculationsTest, ValidationTest, PlayerColorsTest,
+  FormattingTest (Datum deutsch/englisch/französisch, Prozent),
+  GameSetupViewModelTest (eindeutige Farben), RunningGameInfoTest
+  (Infozeilen laufendes Spiel), BackupReminderTest
+  (Erinnerungsregel), PlayerStatisticsTest (Siege, Gleichstand, Endbonus, inaktive Spieler,
+  Sortierung), CsvExporterTest
+  (Kopfzeile, Zeilen, Endbonus-Zeile, Summe = Gesamtpunkte, Trennzeichen,
+  Maskierung, Formel-Schutz, leere Daten).
+  Start: Rechtsklick auf src/test -> Run Tests, oder ./gradlew test
+
+19.2 Instrumentierte Tests (src/androidTest, brauchen Emulator/Gerät)
+---------------------------------------------------------------------
+  GameRepositoryTest   42 Tests mit In-Memory-Datenbank (Spieler, Spiel
+                       starten, Runden, Beenden, Statistik, Löschen)
+  RoundEditRepositoryTest
+                       Runde ändern (Werte, Summen, Rundennummer, Ablehnung bei
+                       gespeichertem Spiel, unbekanntem Spieler, ungültigen Werten)
+  PlayerStatisticsRepositoryTest
+                       Spielerstatistik gegen die Datenbank (Testspiele und
+                       laufende Spiele ausgeschlossen, gelöschte Spieler,
+                       Endbonus, gelöschte Partien)
+  BackupJsonTest       Hin-und-zurück-Test, Sonderzeichen, BOM, Fehlerfälle
+                       (kein JSON, fremdes JSON, neuere Version, fehlende
+                       Tabelle, doppelte IDs, ungültige Verweise, negative
+                       Punkte, leere Namen)
+  BackupDaoTest        replaceAll/snapshot, Ersetzen, Leeren, Rollback bei
+                       ungültigem Verweis, neue IDs nach Wiederherstellung
+  MigrationTest        öffnet eine Version-1-Datenbank (aus 1.json) mit der
+                       aktuellen App und prüft, dass die Daten erhalten sind.
+                       Derzeit mit @Ignore deaktiviert (AbstractMethodError durch
+                       Versionskonflikt kotlinx-serialization im androidTest);
+                       vor der ersten Schemaänderung reparieren und wieder
+                       aktivieren (kotlinx-serialization-Version festlegen).
+  Start: Rechtsklick auf src/androidTest -> Run Tests, oder
+         ./gradlew connectedAndroidTest
+
+Hinweis: BackupJson nutzt org.json. Auf der reinen JVM ist org.json nur eine
+Attrappe; deshalb laufen diese Tests instrumentiert.
+
+
+================================================================================
+20. DATENBANK-MIGRATIONEN
+================================================================================
+
+Grundlage: DATABASE_VERSION (AppDatabase.kt), exportSchema = true, das
+Room-Gradle-Plugin mit schemaDirectory("$projectDir/schemas") und die Datei
+data/database/Migrations.kt (object Migrations, Liste ALL, aktuell leer).
+
+Beim ersten Build entsteht
+  app/schemas/com.thomas.qwirkle.data.database.AppDatabase/1.json
+Diese Datei muss im Projekt (und in der Versionsverwaltung) bleiben.
+
+Ablauf bei einer Schemaänderung (Beispiel: neue Spalte):
+  1. Entity ändern.
+  2. DATABASE_VERSION um 1 erhöhen.
+  3. In Migrations.kt eine Migration(n, n+1) mit den SQL-Anweisungen schreiben
+     und in ALL eintragen.
+  4. Bauen: Room erzeugt die neue Schema-Datei (n+1.json). Alle Schema-Dateien
+     behalten.
+  5. MigrationTest um einen Test n -> n+1 erweitern
+     (helper.runMigrationsAndValidate).
+  6. Backup-Format prüfen: ändert sich der Aufbau der Daten, BackupJson.
+     FORMAT_VERSION erhöhen und decode() so erweitern, dass alte Sicherungen
+     weiterhin lesbar bleiben.
+
+Niemals fallbackToDestructiveMigration() verwenden: bei einem Update würden
+alle Spiele der Nutzer gelöscht.
+
+
+================================================================================
+21. EXPORT, SICHERUNG UND IMPORT
+================================================================================
+
+21.1 Ablauf
+-----------
+  DataScreen -> DataViewModel -> BackupRepository -> BackupDao
+  Die Datei wird über den Android-Dateidialog (Storage Access Framework)
+  gewählt; es sind keine zusätzlichen Berechtigungen nötig.
+
+21.2 JSON-Sicherung (BackupJson)
+--------------------------------
+  Enthält alle Tabellen, auch inaktive Spieler und das laufende Spiel.
+  Kopf:    format = "qwirkle-backup", formatVersion, schemaVersion,
+           exportedAt (Millisekunden)
+  Listen:  players, games, gamePlayers, rounds, roundScores
+  endBonusPlayerId wird als null geschrieben, wenn nicht gesetzt.
+
+  Prüfung beim Einlesen (bevor irgendetwas gelöscht wird):
+    - gültiges JSON mit format = "qwirkle-backup"    sonst NOT_A_BACKUP
+    - formatVersion nicht größer als bekannt          sonst NEWER_VERSION
+    - alle Felder vorhanden und vom richtigen Typ     sonst NOT_A_BACKUP
+    - IDs eindeutig, alle Verweise gültig, keine negativen Punkte, keine
+      leeren Namen, Rundennummer >= 1                 sonst INCONSISTENT
+  Dateien über 20 MB werden abgelehnt (TOO_LARGE).
+
+21.3 Wiederherstellung (BackupDao.replaceAll)
+---------------------------------------------
+  Eine Transaktion: erst löschen (round_scores, rounds, game_players,
+  game_history, players), dann einfügen (players, game_history,
+  game_players, rounds, round_scores). Schlägt ein Schritt fehl, wird alles
+  zurückgerollt und die bisherigen Daten bleiben unverändert. Die
+  ursprünglichen IDs bleiben erhalten; neue Datensätze erhalten danach
+  fortlaufend höhere IDs.
+
+21.4 CSV-Export (CsvExporter)
+-----------------------------
+  Eine Zeile pro Spieler und Runde. Spalten:
+    Datum, Spiel, Testspiel, Abgeschlossen, Runde, Spieler, Punkte, Qwirkles,
+    Qwirkle-Bonus, Rundenpunkte
+  (Überschriften in der App-Sprache; Datum als JJJJ-MM-TT.)
+  - Rundenpunkte = Punkte + Qwirkle-Bonus.
+  - Der Endbonus steht als eigene Zeile (Runde = "Endbonus", Rundenpunkte 6),
+    nur bei abgeschlossenen Spielen mit gewähltem Endbonus-Spieler. Die Summe
+    der Spalte Rundenpunkte je Spiel entspricht damit den Gesamtpunkten.
+  - Spielerreihenfolge innerhalb einer Runde = Spielreihenfolge.
+  - Trennzeichen: ";" bei deutscher Sprache, sonst ",".
+  - UTF-8 mit BOM (Umlaute in Excel), Zeilenende CRLF.
+  - Textfelder mit Trennzeichen oder Anführungszeichen werden maskiert;
+    Namen, die mit = + - @ beginnen, erhalten ein vorangestelltes ', damit
+    Excel sie nicht als Formel ausführt.
+  - Enthält auch Testspiele und das laufende Spiel (Spalten Testspiel und
+    Abgeschlossen dienen zum Filtern).
+
+
+================================================================================
+22. VERTEILUNG (APK, SIGNIERUNG)
+================================================================================
+
+  - Für Freunde und eigene Geräte: signierte Release-APK
+    (Build -> Generate Signed App Bundle / APK -> APK). Installation durch
+    Öffnen der Datei; "Installation aus unbekannten Quellen" muss für die
+    öffnende App erlaubt sein.
+  - AAB (App Bundle) nur für den Google Play Store.
+  - Keystore-Datei und Passwörter sichern (z. B. Passwortmanager und Kopie an
+    einem zweiten Ort). Ohne denselben Schlüssel lassen sich spätere Updates
+    nicht über die installierte App einspielen.
+  - versionCode vor jedem Update erhöhen (app/build.gradle.kts, defaultConfig),
+    versionName nach Belieben.
+  - Bekannter Befund: Die Release-APK lief auf Android 17 nicht, die Debug-APK
+    schon. Vermutete Ursache: R8-Optimierung. Abhilfe: in der Release-
+    Konfiguration die Optimierung abschalten (optimization { enable = false }).
+    Eine Release-APK lässt sich nicht über eine Debug-Installation spielen
+    (andere Signatur): erst deinstallieren, vorher Sicherung anlegen (Abschnitt 21).
+  - Google verlangt für die Installation auf zertifizierten Geräten zunehmend
+    eine Entwicklerverifizierung; für kleine Verteilung (begrenzte Anzahl
+    Geräte) gibt es eine eingeschränkte Variante. Aktuelle Regeln bei Google
+    nachlesen.
+
+================================================================================
+ENDE DER DOKUMENTATION
+================================================================================

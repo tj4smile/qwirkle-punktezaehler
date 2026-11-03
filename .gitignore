@@ -1,0 +1,45 @@
+# Gradle / Build
+.gradle/
+.kotlin/
+app/release/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.DS_Store
+
+# Lokale Konfiguration (Pfade, Passwörter) - NIE einchecken
+local.properties
+keystore.properties
+
+# Schlüssel und Signierung - NIE einchecken
+*.jks
+*.keystore
+*.p12
+*.pem
+signing.properties
+
+# Erzeugte Pakete (stattdessen als GitHub-Release hochladen)
+*.apk
+*.aab
+*.ap_
+
+# Logs, Sicherungen, Test-Exporte
+*.log
+qwirkle-backup-*.json
+qwirkle-games-*.csv
+
+# Wichtig: Room-Schemas MÜSSEN eingecheckt bleiben (Migrationstests)
+!app/schemas/
+
+# Lose Hilfsdateien aus der Entwicklung (Abfrage-Ausgaben)
+deps.txt
+deps.txtfindstr
+insight.txt
+/dir
+/schemas
