@@ -46,11 +46,11 @@ Daten beim Deinstallieren verloren.
 ## Screenshots
 
 <p>
-  <img src="docs/screenshots/screenshot_Startbildschirm.png" width="220">
-  <img src="docs/screenshots/screenshot_Langzeitstatistik.png" width="220">
-  <img src="docs/screenshots/screenshot_NeuesSpiel.png" width="220">
-  <img src="docs/screenshots/screenshot_Punkteeingabe" width="220">
-  <img src="docs/screenshots/screenshot_Spielerverwaltung" width="220">
+  <img src="docs/screenshots/Screenshot_Startbildschirm.png" width="220">
+  <img src="docs/screenshots/Screenshot_Langzeitstatistik.png" width="220">
+  <img src="docs/screenshots/Screenshot_NeuesSpiel.png" width="220">
+  <img src="docs/screenshots/Screenshot_Punkteeingabe" width="220">
+  <img src="docs/screenshots/Screenshot_Spielerverwaltung" width="220">
 </p>
 
 ## Selbst bauen
