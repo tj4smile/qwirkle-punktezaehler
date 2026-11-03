@@ -45,7 +45,13 @@ Daten beim Deinstallieren verloren.
 
 ## Screenshots
 
-*(Screenshots hier einfügen, z. B. im Ordner `docs/screenshots/`.)*
+<p>
+  <img src="docs/screenshots/screenshot_Startbildschirm.png" width="220">
+  <img src="docs/screenshots/screenshot_Langzeitstatistik.png" width="220">
+  <img src="docs/screenshots/screenshot_NeuesSpiel.png" width="220">
+  <img src="docs/screenshots/screenshot_Punkteeingabe" width="220">
+  <img src="docs/screenshots/screenshot_Spielerverwaltung" width="220">
+</p>
 
 ## Selbst bauen
 
