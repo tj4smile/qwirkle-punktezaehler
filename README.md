@@ -50,7 +50,7 @@ Daten beim Deinstallieren verloren.
   <img src="docs/screenshots/Screenshot_Langzeitstatistik.png" width="220">
   <img src="docs/screenshots/Screenshot_NeuesSpiel.png" width="220">
   <img src="docs/screenshots/Screenshot_Punkteeingabe.png" width="220">
-  <img src="docs/screenshots/Screenshot_Spielerverwaltung.png" width="220">
+  <img src="docs/screenshots/Screenshot_SpielerVerwaltung.png" width="220">
 </p>
 
 ## Selbst bauen
