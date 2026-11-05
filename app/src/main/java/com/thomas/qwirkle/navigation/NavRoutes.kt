@@ -12,14 +12,6 @@ object NavRoutes {
     const val DATA = "data"
     const val INFO = "info"
 
-    // Reihenfolge & Farben vor dem Spielstart: Spieler-IDs als "1,2,3", Testspiel true/false
-    const val ARG_PLAYER_IDS = "playerIds"
-    const val ARG_TEST_GAME = "testGame"
-    const val SETUP = "setup/{$ARG_PLAYER_IDS}/{$ARG_TEST_GAME}"
-
-    fun setup(playerIds: List<Long>, isTestGame: Boolean) =
-        "setup/${playerIds.joinToString(",")}/$isTestGame"
-
     // Bildschirme eines laufenden Spiels (Route-Muster mit Argument)
     const val SCORING = "scoring/{$ARG_GAME_ID}"     // Punkteerfassung
     const val HISTORY = "history/{$ARG_GAME_ID}"     // Spielverlauf

@@ -19,4 +19,16 @@ object PlayerColors {
     /** Erste Farbe, die noch kein aktiver Spieler hat; sonst reihum. */
     fun nextFreeIndex(used: Set<Int>): Int =
         (0 until COUNT).firstOrNull { it !in used } ?: (used.size % COUNT)
+
+    /**
+     * Macht die Farben eindeutig: die erste Verwendung einer Farbe bleibt,
+     * jede weitere bekommt eine noch freie. Bei höchstens [COUNT] Spielern
+     * gibt es immer genug freie Farben.
+     */
+    fun uniqueColors(colors: List<Int>): List<Int> {
+        val seen = mutableSetOf<Int>()
+        val isDuplicate = colors.map { !seen.add(it) }
+        val free = (0 until COUNT).filter { it !in seen }.iterator()
+        return colors.mapIndexed { i, c -> if (isDuplicate[i] && free.hasNext()) free.next() else c }
+    }
 }

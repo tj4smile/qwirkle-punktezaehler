@@ -13,7 +13,6 @@ import com.thomas.qwirkle.ui.screens.gameplay.GameEndScreen
 import com.thomas.qwirkle.ui.screens.gameplay.GameHistoryScreen
 import com.thomas.qwirkle.ui.screens.home.HomeScreen
 import com.thomas.qwirkle.ui.screens.info.InfoScreen
-import com.thomas.qwirkle.ui.screens.newgame.GameSetupScreen
 import com.thomas.qwirkle.ui.screens.newgame.NewGameScreen
 import com.thomas.qwirkle.ui.screens.players.PlayerManagementScreen
 import com.thomas.qwirkle.ui.screens.results.ResultScreen
@@ -49,7 +48,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
                 onPlayers = { navController.navigate(NavRoutes.PLAYERS) },
                 onData = { navController.navigate(NavRoutes.DATA) },
                 onInfo = { navController.navigate(NavRoutes.INFO) },
-                onResumeGame = { gameId -> navController.navigate(NavRoutes.history(gameId)) }
+                onResumeGame = { gameId -> navController.navigate(NavRoutes.scoring(gameId)) }
             )
         }
 
@@ -73,27 +72,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             NewGameScreen(
                 onBack = { navController.popBackStack() },
                 onManagePlayers = { navController.navigate(NavRoutes.PLAYERS) },
-                onContinue = { ids, isTest ->
-                    navController.navigate(NavRoutes.setup(ids, isTest))
-                }
-            )
-        }
-
-        // Reihenfolge & Farben -> Spiel anlegen -> erste Runde
-        composable(
-            NavRoutes.SETUP,
-            arguments = listOf(
-                navArgument(NavRoutes.ARG_PLAYER_IDS) { type = NavType.StringType },
-                navArgument(NavRoutes.ARG_TEST_GAME) { type = NavType.BoolType }
-            )
-        ) { entry ->
-            val ids = entry.arguments?.getString(NavRoutes.ARG_PLAYER_IDS).orEmpty()
-                .split(",").mapNotNull { it.toLongOrNull() }
-            GameSetupScreen(
-                playerIds = ids,
-                isTestGame = entry.arguments?.getBoolean(NavRoutes.ARG_TEST_GAME) ?: false,
-                onBack = { navController.popBackStack() },
                 onGameStarted = { gameId ->
+                    // Direkt in die Rundenerfassung; "Zurück" führt nicht mehr in die Auswahl
                     navController.navigate(NavRoutes.scoring(gameId)) {
                         popUpTo(NavRoutes.NEWGAME) { inclusive = true }
                     }
@@ -101,16 +81,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             )
         }
 
-        // Punkteerfassung -> Runde gespeichert -> Spielverlauf
+        // Rundenerfassung bleibt nach "Runde speichern" stehen; Rundenübersicht über eigene Karte
         composable(NavRoutes.SCORING, arguments = gameIdArgument) { entry ->
             val gameId = entry.gameId()
             ScoreEntryScreen(
                 gameId = gameId,
-                onRoundSaved = {
-                    navController.navigate(NavRoutes.history(gameId)) {
-                        popUpTo(NavRoutes.SCORING) { inclusive = true }
-                    }
-                },
+                onRoundSaved = {},
+                onShowHistory = { navController.navigate(NavRoutes.history(gameId)) },
                 onFinish = { navController.navigate(NavRoutes.gameEnd(gameId)) },
                 onBack = goHome
             )
@@ -132,16 +109,12 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             val gameId = entry.gameId()
             GameHistoryScreen(
                 gameId = gameId,
-                onAddRound = {
-                    navController.navigate(NavRoutes.scoring(gameId)) {
-                        popUpTo(NavRoutes.HISTORY) { inclusive = true }
-                    }
-                },
+                onAddRound = { navController.popBackStack() },
                 onEditRound = { roundId ->
                     navController.navigate(NavRoutes.editRound(gameId, roundId))
                 },
                 onFinish = { navController.navigate(NavRoutes.gameEnd(gameId)) },
-                onBack = goHome
+                onBack = { navController.popBackStack() }
             )
         }
 

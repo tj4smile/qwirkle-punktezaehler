@@ -13,9 +13,13 @@ keine Datenweitergabe.
 ## Funktionen
 
 - Spieler verwalten (2 bis 7 Spieler pro Spiel, eigene Farben)
-- Reihenfolge und Farben vor dem Spielstart festlegen
-- Punkte pro Runde schnell erfassen (Zahlenrad 0–20, Tastatur für größere Werte),
-  Qwirkles zählen, Bonus wird automatisch addiert
+- Neues Spiel: Mitspieler als Kacheln antippen, die Auswahlreihenfolge ist die
+  Spielreihenfolge; doppelte Farben werden automatisch vermieden
+- Punkte pro Runde schnell erfassen mit eigenem Nummernpad (Ziffern, Qwirkle
+  hinzufügen/entfernen, Bestätigen springt zum nächsten Spieler), Bonus wird
+  automatisch addiert; Spielreihenfolge lässt sich vor der ersten Eingabe noch ändern
+- Rundenübersicht jederzeit per Karte erreichbar, laufende Runde geht auch bei
+  App-Abbruch nicht verloren
 - Spielverlauf als Tabelle, einzelne Runden nachträglich korrigieren
 - Endspielbonus, Endauswertung mit Platzierungen
 - Statistik: gespielte Partien, Rekorde, Spielerstatistik (Siege, Siegquote,
@@ -45,15 +49,21 @@ Daten beim Deinstallieren verloren.
 
 ## Screenshots
 
-*(Screenshots hier einfügen, z. B. im Ordner `docs/screenshots/`.)*
+<p>
+  <img src="docs/screenshots/Screenshot_Startbildschirm.png" width="220">
+  <img src="docs/screenshots/Screenshot_Langzeitstatistik.png" width="220">
+  <img src="docs/screenshots/Screenshot_NeuesSpiel.png" width="220">
+  <img src="docs/screenshots/Screenshot_Punkteeingabe.png" width="220">
+  <img src="docs/screenshots/Screenshot_SpielerVerwaltung.png" width="220">
+</p>
 
 ## Selbst bauen
 
 Voraussetzungen: Android Studio (aktuell), JDK passend zum Android Gradle Plugin.
 
 ```
-git clone <dieses Repository>
-cd <Ordner>
+git clone https://github.com/tj4smile/qwirkle-punktezaehler.git
+cd qwirkle-punktezaehler
 ./gradlew assembleDebug        # Windows: gradlew.bat assembleDebug
 ```
 
@@ -63,7 +73,7 @@ gehört **nicht** ins Repository.
 
 Technik: Kotlin, Jetpack Compose, Material 3, Room, Navigation Compose,
 MVVM. Die ausführliche technische Dokumentation steht in
-[`docs/Qwirkle_Projektdokumentation.txt`](docs/Qwirkle_Projektdokumentation.txt).
+[`docs/Qwirkle_Projektdokumentation.2.17.txt`](docs/Qwirkle_Projektdokumentation.2.17.txt).
 
 ## Mitmachen
 
@@ -81,7 +91,7 @@ Der Quellcode steht unter der [MIT-Lizenz](LICENSE). Die verwendeten Bibliotheke
 
 A simple, ad-free score keeper for the tile game **Qwirkle** (Android 8.0+).
 All data stays on your device: no account, no internet access needed, no data
-sharing. Features: player management, playing order and colors, quick score entry,
+sharing. Features: player management, playing order and colors, quick score entry with a built-in number pad,
 round history with corrections, end bonus, statistics, backup/restore (JSON),
 CSV export, German and English UI.
 

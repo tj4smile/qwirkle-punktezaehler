@@ -8,6 +8,9 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.thomas.qwirkle.data.entity.Player
 import com.thomas.qwirkle.data.repository.GameRepository
 import com.thomas.qwirkle.util.GameRules
+import com.thomas.qwirkle.util.PlayerColors
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,13 +43,41 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
         _isTestGame.value = value
     }
 
-    /** Prüft die Auswahl und meldet Spielerreihenfolge und Testspiel-Kennzeichen. */
-    fun continueToSetup(onNext: (playerIds: List<Long>, isTestGame: Boolean) -> Unit) {
-        // Nur Spieler, die es noch gibt (falls zwischenzeitlich gelöscht)
-        val existing = players.value.map { it.id }.toSet()
-        val ids = _selectedIds.value.filter { it in existing }
-        if (ids.size !in GameRules.MIN_PLAYERS..GameRules.MAX_PLAYERS) return
-        onNext(ids, _isTestGame.value)
+    /**
+     * Farben der gewählten Spieler (Spieler-ID -> colorIndex) in Spielreihenfolge.
+     * Doppelte Farben sind schon aufgelöst, damit die Kachel sofort die endgültige Farbe zeigt.
+     */
+    val colors: StateFlow<Map<Long, Int>> = combine(players, _selectedIds) { all, ids ->
+        val byId = all.associateBy { it.id }
+        val selected = ids.mapNotNull { byId[it] }
+        val unique = PlayerColors.uniqueColors(selected.map { it.colorIndex })
+        selected.map { it.id }.zip(unique).toMap()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    private val _isStarting = MutableStateFlow(false)
+
+    /**
+     * Legt das Spiel an. Geänderte (vorher doppelte) Farben werden dauerhaft am Spieler
+     * gespeichert. Meldet die Spiel-ID, danach geht es direkt in die Rundenerfassung.
+     */
+    fun start(onStarted: (gameId: Long) -> Unit) {
+        if (_isStarting.value) return
+        val byId = players.value.associateBy { it.id }
+        val selected = _selectedIds.value.mapNotNull { byId[it] }
+        if (selected.size !in GameRules.MIN_PLAYERS..GameRules.MAX_PLAYERS) return
+        val unique = PlayerColors.uniqueColors(selected.map { it.colorIndex })
+        _isStarting.value = true
+        viewModelScope.launch {
+            try {
+                selected.zip(unique)
+                    .filter { (player, color) -> player.colorIndex != color }
+                    .forEach { (player, color) -> repository.changePlayerColor(player, color) }
+                val gameId = repository.startGame(selected.map { it.id }, _isTestGame.value)
+                onStarted(gameId)
+            } finally {
+                _isStarting.value = false
+            }
+        }
     }
 
     companion object {

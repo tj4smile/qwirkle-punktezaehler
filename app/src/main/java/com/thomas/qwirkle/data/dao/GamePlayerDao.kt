@@ -49,4 +49,13 @@ abstract class GamePlayerDao {
             "WHERE gp.gameId = :gameId ORDER BY gp.position"
     )
     abstract suspend fun getPlayersOfGameOnce(gameId: Long): List<Player>
+
+    @Query("UPDATE game_players SET position = :position WHERE gameId = :gameId AND playerId = :playerId")
+    abstract suspend fun updatePosition(gameId: Long, playerId: Long, position: Int)
+
+    /** Speichert eine neue Spielreihenfolge (Liste der Spieler-IDs in der neuen Reihenfolge). */
+    @Transaction
+    open suspend fun reorder(gameId: Long, playerIds: List<Long>) {
+        playerIds.forEachIndexed { index, id -> updatePosition(gameId, id, index) }
+    }
 }

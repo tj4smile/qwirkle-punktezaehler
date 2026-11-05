@@ -1,19 +1,17 @@
 package com.thomas.qwirkle.ui.screens.gameplay
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thomas.qwirkle.R
 import com.thomas.qwirkle.ui.components.BackButton
-import com.thomas.qwirkle.ui.components.PlayerColorDot
+import com.thomas.qwirkle.ui.components.SelectableTile
+import com.thomas.qwirkle.ui.theme.playerColor
 import com.thomas.qwirkle.ui.components.rememberRepository
 import com.thomas.qwirkle.ui.components.screenPadding
 import com.thomas.qwirkle.util.GameRules
@@ -65,30 +64,27 @@ fun GameEndScreen(
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(players, key = { it.id }) { player ->
-                    ChoiceRow(
+                    SelectableTile(
+                        text = player.name,
                         selected = choice == player.id,
-                        onSelect = { viewModel.select(player.id) }
-                    ) {
-                        PlayerColorDot(colorIndex = player.colorIndex, size = 20)
-                        Spacer(Modifier.width(12.dp))
-                        Text(player.name, style = MaterialTheme.typography.titleMedium)
-                    }
+                        selectedColor = playerColor(player.colorIndex),
+                        onClick = { viewModel.select(player.id) }
+                    )
                 }
-                item {
-                    ChoiceRow(
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    SelectableTile(
+                        text = stringResource(R.string.gameend_nobody),
                         selected = choice == GameEndViewModel.NO_BONUS,
-                        onSelect = { viewModel.select(GameEndViewModel.NO_BONUS) }
-                    ) {
-                        Text(
-                            stringResource(R.string.gameend_nobody),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
+                        selectedColor = MaterialTheme.colorScheme.primary,
+                        onClick = { viewModel.select(GameEndViewModel.NO_BONUS) }
+                    )
                 }
             }
 
@@ -112,24 +108,5 @@ fun GameEndScreen(
                 Text(stringResource(R.string.gameend_show_results))
             }
         }
-    }
-}
-
-@Composable
-private fun ChoiceRow(
-    selected: Boolean,
-    onSelect: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Spacer(Modifier.width(12.dp))
-        content()
     }
 }

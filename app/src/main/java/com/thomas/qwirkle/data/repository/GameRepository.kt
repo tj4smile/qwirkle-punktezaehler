@@ -102,6 +102,10 @@ class GameRepository(
     fun getGamePlayers(gameId: Long): Flow<List<Player>> =
         gamePlayerDao.getPlayersOfGame(gameId)
 
+    /** Ändert die Spielreihenfolge eines Spiels (IDs in neuer Reihenfolge). */
+    suspend fun reorderPlayers(gameId: Long, playerIds: List<Long>) =
+        gamePlayerDao.reorder(gameId, playerIds)
+
     suspend fun getGamePlayersOnce(gameId: Long): List<Player> =
         gamePlayerDao.getPlayersOfGameOnce(gameId)
 

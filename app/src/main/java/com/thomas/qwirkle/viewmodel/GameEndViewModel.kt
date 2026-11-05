@@ -32,8 +32,9 @@ class GameEndViewModel(
         }
     }
 
+    /** Antippen wählt aus, nochmaliges Antippen hebt die Wahl wieder auf. */
     fun select(id: Long) {
-        _choice.value = id
+        _choice.value = if (_choice.value == id) null else id
     }
 
     fun confirm(onDone: () -> Unit) {

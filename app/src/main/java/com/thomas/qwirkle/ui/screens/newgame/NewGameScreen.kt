@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -26,9 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thomas.qwirkle.R
-import com.thomas.qwirkle.data.entity.Player
 import com.thomas.qwirkle.ui.components.BackButton
-import com.thomas.qwirkle.ui.components.PlayerColorDot
+import com.thomas.qwirkle.ui.components.SelectableTile
+import com.thomas.qwirkle.ui.theme.playerColor
 import com.thomas.qwirkle.ui.components.rememberRepository
 import com.thomas.qwirkle.ui.components.screenPadding
 import com.thomas.qwirkle.util.GameRules
@@ -38,12 +40,13 @@ import com.thomas.qwirkle.viewmodel.NewGameViewModel
 fun NewGameScreen(
     onBack: () -> Unit,
     onManagePlayers: () -> Unit,
-    onContinue: (playerIds: List<Long>, isTestGame: Boolean) -> Unit,
+    onGameStarted: (gameId: Long) -> Unit,
     viewModel: NewGameViewModel = viewModel(factory = NewGameViewModel.factory(rememberRepository()))
 ) {
     val players by viewModel.players.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
     val isTestGame by viewModel.isTestGame.collectAsState()
+    val colors by viewModel.colors.collectAsState()
 
     val selectedCount = selectedIds.size
     val isFull = selectedCount >= GameRules.MAX_PLAYERS
@@ -81,21 +84,25 @@ fun NewGameScreen(
                     }
                 }
             } else {
-                // Auswahl und Optionen scrollen zusammen, der Start-Knopf bleibt unten sichtbar
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                // Kacheln (zwei pro Zeile) und Optionen scrollen zusammen, der Start-Knopf bleibt unten
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.weight(1f).padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(players, key = { it.id }) { player ->
                         val checked = player.id in selectedIds
-                        PlayerSelectRow(
-                            player = player,
-                            checked = checked,
+                        SelectableTile(
+                            text = player.name,
+                            selected = checked,
+                            selectedColor = playerColor(colors[player.id] ?: player.colorIndex),
                             enabled = checked || !isFull,
-                            onToggle = { viewModel.togglePlayer(player.id) }
+                            badge = if (checked) "${selectedIds.indexOf(player.id) + 1}" else null,
+                            onClick = { viewModel.togglePlayer(player.id) }
                         )
                     }
-                    item {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Column {
                             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             Text(
@@ -140,36 +147,14 @@ fun NewGameScreen(
             }
 
             Button(
-                onClick = { viewModel.continueToSetup(onContinue) },
+                onClick = { viewModel.start(onGameStarted) },
                 enabled = canStart,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
-                Text(stringResource(R.string.newgame_next))
+                Text(stringResource(R.string.newgame_start))
             }
         }
-    }
-}
-
-@Composable
-private fun PlayerSelectRow(
-    player: Player,
-    checked: Boolean,
-    enabled: Boolean,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onToggle)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
-        Spacer(Modifier.width(12.dp))
-        PlayerColorDot(colorIndex = player.colorIndex, size = 20)
-        Spacer(Modifier.width(12.dp))
-        Text(player.name, style = MaterialTheme.typography.titleMedium)
     }
 }

@@ -1,60 +1,62 @@
 package com.thomas.qwirkle.ui.screens.scoring
 
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.gestures.snapping.SnapPosition
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
+import com.thomas.qwirkle.ui.theme.GamesChipContainerDark
+import com.thomas.qwirkle.ui.theme.GamesChipContainerLight
+import com.thomas.qwirkle.ui.theme.GamesChipContentDark
+import com.thomas.qwirkle.ui.theme.GamesChipContentLight
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import kotlin.math.abs
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.thomas.qwirkle.R
 import com.thomas.qwirkle.data.entity.Player
@@ -71,6 +73,7 @@ fun ScoreEntryScreen(
     gameId: Long,
     onRoundSaved: () -> Unit,
     onFinish: () -> Unit,
+    onShowHistory: () -> Unit = {},
     onBack: () -> Unit,
     roundId: Long? = null, // gesetzt = vorhandene Runde bearbeiten
     viewModel: ScoreEntryViewModel = viewModel(
@@ -83,9 +86,37 @@ fun ScoreEntryScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val editedRoundNumber by viewModel.editedRoundNumber.collectAsState()
+    val orderLocked by viewModel.orderLocked.collectAsState()
+    val activeIndex by viewModel.activeIndex.collectAsState()
+    val confirmed by viewModel.confirmed.collectAsState()
+    val savedQwirkles by viewModel.savedQwirkles.collectAsState()
     val isEditing = roundId != null
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var showUnconfirmed by rememberSaveable { mutableStateOf(false) }
 
     val canSave = players.isNotEmpty() && !isSaving && !isLoading
+
+    // Während der Rundenerfassung bleibt der Bildschirm an
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    // Die Liste folgt dem Cursor
+    LaunchedEffect(activeIndex, players.size) {
+        val visible = listState.layoutInfo.visibleItemsInfo.any { it.index == activeIndex }
+        if (!visible && players.isNotEmpty()) listState.animateScrollToItem(activeIndex)
+    }
+
+    val doSave: () -> Unit = {
+        viewModel.save {
+            // Neue Runde beginnt oben in der Liste
+            scope.launch { listState.scrollToItem(0) }
+            onRoundSaved()
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -109,23 +140,28 @@ fun ScoreEntryScreen(
 
             ScoreColumnHeader()
 
-            // Karten und Knöpfe scrollen zusammen, so bleibt auch bei 7 Spielern und
-            // eingeblendeter Tastatur genug Platz zum Eintragen
+            // Karten und Knöpfe scrollen; das Nummernpad bleibt unten fest
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(players, key = { it.id }) { player ->
+                itemsIndexed(players, key = { _, p -> p.id }) { index, player ->
                     PlayerScoreCard(
                         player = player,
+                        isActive = index == activeIndex,
+                        isConfirmed = player.id in confirmed,
+                        showOrderArrows = !orderLocked,
+                        canMoveUp = index > 0,
+                        canMoveDown = index < players.lastIndex,
+                        onMove = { viewModel.movePlayer(player.id, it) },
                         input = inputs[player.id] ?: ScoreInput(),
-                        onPointsChange = { viewModel.setPoints(player.id, it) },
-                        onQwirkleChange = { viewModel.changeQwirkles(player.id, it) }
+                        onSelect = { viewModel.setCursor(index) }
                     )
                 }
                 item {
                     Column(
-                        modifier = Modifier.padding(bottom = 16.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
@@ -133,7 +169,9 @@ fun ScoreEntryScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                         Button(
-                            onClick = { viewModel.save(onRoundSaved) },
+                            onClick = {
+                                if (viewModel.unconfirmedCount() > 0) showUnconfirmed = true else doSave()
+                            },
                             enabled = canSave,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -144,6 +182,13 @@ fun ScoreEntryScreen(
                             )
                         }
                         if (!isEditing) {
+                            FilledTonalButton(
+                                onClick = onShowHistory,
+                                enabled = roundCount >= 1,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(stringResource(R.string.scoring_history))
+                            }
                             // Beenden erst, wenn mindestens eine Runde gespeichert ist
                             OutlinedButton(
                                 onClick = onFinish,
@@ -165,14 +210,57 @@ fun ScoreEntryScreen(
                     }
                 }
             }
+
+            // Alle Qwirkles des Spiels bisher, einschließlich der laufenden Runde
+            Text(
+                stringResource(
+                    R.string.scoring_game_qwirkles,
+                    savedQwirkles + inputs.values.sumOf { it.qwirkles }
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            )
+
+            NumberPad(
+                onDigit = viewModel::pressDigit,
+                onDelete = viewModel::pressDelete,
+                onQwirkleLess = viewModel::pressQwirkleLess,
+                onQwirkle = viewModel::pressQwirkle,
+                onConfirm = viewModel::pressConfirm,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+            )
         }
+    }
+
+    if (showUnconfirmed) {
+        AlertDialog(
+            onDismissRequest = { showUnconfirmed = false },
+            title = { Text(stringResource(R.string.scoring_unconfirmed_title)) },
+            text = {
+                Text(stringResource(R.string.scoring_unconfirmed_text, viewModel.unconfirmedCount()))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUnconfirmed = false
+                    doSave()
+                }) { Text(stringResource(R.string.scoring_save_anyway)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnconfirmed = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
     }
 }
 
 private val PointsFieldWidth = 72.dp
-private val QwirkleControlWidth = 116.dp // Minus (40) + Zahl (36) + Plus (40)
+private val QwirkleControlWidth = 56.dp
+private val KeyHeight = 48.dp
 
-/** Spaltenüberschriften, passend zu den Breiten in PlayerScoreRow. */
+/** Spaltenüberschriften, passend zu den Breiten in PlayerScoreCard. */
 @Composable
 private fun ScoreColumnHeader() {
     Row(
@@ -198,20 +286,31 @@ private fun ScoreColumnHeader() {
     }
 }
 
-/** Ein Spieler in einer Zeile: Farbpunkt + Name, Punktefeld, Qwirkle-Zähler mit Bonus. */
+/** Ein Spieler: Name mit Zwischensumme, Punktefeld (nur Anzeige), Qwirkle-Zähler mit Bonus. */
 @Composable
 private fun PlayerScoreCard(
     player: Player,
+    isActive: Boolean,
+    isConfirmed: Boolean,
+    showOrderArrows: Boolean,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMove: (delta: Int) -> Unit,
     input: ScoreInput,
-    onPointsChange: (String) -> Unit,
-    onQwirkleChange: (delta: Int) -> Unit
+    onSelect: () -> Unit
 ) {
-    val lessDescription = stringResource(R.string.scoring_qwirkle_less)
-    val moreDescription = stringResource(R.string.scoring_qwirkle_more)
     val pointsDescription = stringResource(R.string.scoring_points_for, player.name)
-    var showPicker by rememberSaveable { mutableStateOf(false) }
+    val darkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeColor = if (darkSurface) GamesChipContainerDark else GamesChipContainerLight
+    val activeContent = if (darkSurface) GamesChipContentDark else GamesChipContentLight
+    val total = (input.points.toIntOrNull() ?: 0) + GameRules.qwirkleBonus(input.qwirkles)
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    // Dezente Standardkarte; der aktive Spieler wird nur am Punktefeld markiert
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+    ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -223,222 +322,178 @@ private fun PlayerScoreCard(
             ) {
                 PlayerColorDot(colorIndex = player.colorIndex, size = 16)
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    player.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                Column {
+                    Text(
+                        player.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        (if (isConfirmed) "✓ " else "") + stringResource(R.string.scoring_running_total, total),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isConfirmed) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (isConfirmed) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+
+            if (showOrderArrows) {
+                OrderArrows(
+                    playerName = player.name,
+                    canMoveUp = canMoveUp,
+                    canMoveDown = canMoveDown,
+                    onMove = onMove
                 )
             }
 
-            // Tippen öffnet das Zahlenrad (mit Umschalter auf die Tastatur)
-            OutlinedButton(
-                onClick = { showPicker = true },
-                contentPadding = PaddingValues(0.dp),
+            // Punktefeld: nur Anzeige, eingegeben wird über das Nummernpad
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = if (isActive) activeColor else MaterialTheme.colorScheme.surface,
+                contentColor = if (isActive) activeContent else MaterialTheme.colorScheme.onSurface,
+                border = BorderStroke(
+                    if (isActive) 2.dp else 1.dp,
+                    if (isActive) activeContent else MaterialTheme.colorScheme.outline
+                ),
                 modifier = Modifier
                     .width(PointsFieldWidth)
                     .height(48.dp)
                     .semantics { contentDescription = "$pointsDescription: ${input.points}" }
             ) {
-                Text(input.points.ifEmpty { "0" }, style = MaterialTheme.typography.titleMedium)
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        input.points.ifEmpty { "0" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
-            Row(
+            // Qwirkle-Zähler (nur Anzeige): mehr/weniger über Q+ und Q− am Nummernpad
+            Column(
                 modifier = Modifier.width(QwirkleControlWidth),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                OutlinedButton(
-                    onClick = { onQwirkleChange(-1) },
-                    enabled = input.qwirkles > 0,
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier
-                        .size(40.dp)
-                        .semantics { contentDescription = lessDescription }
-                ) { Text("−") }
-                Column(
-                    modifier = Modifier.width(36.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("${input.qwirkles}", style = MaterialTheme.typography.titleMedium)
-                    if (input.qwirkles > 0) {
-                        Text(
-                            stringResource(
-                                R.string.scoring_bonus,
-                                GameRules.qwirkleBonus(input.qwirkles)
-                            ),
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1
-                        )
-                    }
+                Text("${input.qwirkles}", style = MaterialTheme.typography.titleLarge)
+                if (input.qwirkles > 0) {
+                    Text(
+                        stringResource(R.string.scoring_bonus, GameRules.qwirkleBonus(input.qwirkles)),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
                 }
-                OutlinedButton(
-                    onClick = { onQwirkleChange(+1) },
-                    enabled = input.qwirkles < ScoreEntryViewModel.MAX_QWIRKLES,
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier
-                        .size(40.dp)
-                        .semantics { contentDescription = moreDescription }
-                ) { Text("+") }
             }
         }
-    }
-
-    if (showPicker) {
-        PointsPickerDialog(
-            playerName = player.name,
-            current = input.points.toIntOrNull() ?: 0,
-            onDismiss = { showPicker = false },
-            onConfirm = {
-                onPointsChange(it.toString())
-                showPicker = false
-            }
-        )
     }
 }
 
-private const val WHEEL_MAX = 20
-private const val WHEEL_VISIBLE_ROWS = 5
-private val WheelRowHeight = 44.dp
+/** Pfeile links neben dem Punktefeld: Spieler nach oben/unten schieben (nur vor der ersten Eingabe). */
+@Composable
+private fun OrderArrows(
+    playerName: String,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMove: (delta: Int) -> Unit
+) {
+    val upDescription = stringResource(R.string.scoring_move_up, playerName)
+    val downDescription = stringResource(R.string.scoring_move_down, playerName)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        TextButton(
+            onClick = { onMove(-1) },
+            enabled = canMoveUp,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier
+                .size(width = 36.dp, height = 28.dp)
+                .semantics { contentDescription = upDescription }
+        ) { Text("▲") }
+        TextButton(
+            onClick = { onMove(+1) },
+            enabled = canMoveDown,
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier
+                .size(width = 36.dp, height = 28.dp)
+                .semantics { contentDescription = downDescription }
+        ) { Text("▼") }
+    }
+}
 
 /**
- * Dialog zur Punkteingabe: ein Zahlenrad von 0 bis 20 zum Drehen und Antippen.
- * Über "Tastatur" lassen sich auch größere Werte (bis 2 Stellen) eintippen.
- * Ist der aktuelle Wert größer als das Rad, öffnet der Dialog gleich mit der Tastatur.
+ * Eigenes Nummernpad (ohne Systemtastatur) in den Farben der Spielerkarten:
+ * Ziffern, Q− / Q+ (Qwirkle weniger/mehr), rechts ⌫ (letzte Stelle löschen)
+ * und ✓ (Spieler bestätigen und zum nächsten).
  */
 @Composable
-private fun PointsPickerDialog(
-    playerName: String,
-    current: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
+private fun NumberPad(
+    onDigit: (Int) -> Unit,
+    onDelete: () -> Unit,
+    onQwirkleLess: () -> Unit,
+    onQwirkle: () -> Unit,
+    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    var keyboardMode by rememberSaveable { mutableStateOf(current > WHEEL_MAX) }
-    var typed by rememberSaveable { mutableStateOf(current.toString()) }
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = current.coerceIn(0, WHEEL_MAX)
-    )
-    val scope = rememberCoroutineScope()
-    val focusRequester = remember { FocusRequester() }
+    val deleteDescription = stringResource(R.string.pad_delete)
+    val lessDescription = stringResource(R.string.scoring_qwirkle_less)
+    val moreDescription = stringResource(R.string.pad_qwirkle)
+    val confirmDescription = stringResource(R.string.pad_confirm)
+    val gap = 6.dp
+    val captionText = stringResource(R.string.pad_qwirkle_caption)
 
-    // Das Element, das der Mitte des Rads am nächsten liegt, ist die Auswahl
-    val selected by remember {
-        derivedStateOf {
-            val info = listState.layoutInfo
-            val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
-            info.visibleItemsInfo
-                .minByOrNull { abs(it.offset + it.size / 2 - center) }
-                ?.index ?: current.coerceIn(0, WHEEL_MAX)
-        }
-    }
-
-    // Zurück zum Rad: auf den getippten Wert springen
-    LaunchedEffect(keyboardMode) {
-        if (keyboardMode) {
-            focusRequester.requestFocus()
-        } else {
-            listState.scrollToItem((typed.toIntOrNull() ?: 0).coerceIn(0, WHEEL_MAX))
-        }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(playerName) },
-        text = {
-            if (keyboardMode) {
-                OutlinedTextField(
-                    value = typed,
-                    onValueChange = {
-                        typed = it.filter(Char::isDigit)
-                            .take(ScoreEntryViewModel.MAX_POINT_DIGITS)
-                    },
-                    singleLine = true,
-                    textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
+    // Tasten sind Standardkarten: dieselben Farben wie die Spielerkarten
+    @Composable
+    fun Key(
+        label: String,
+        keyModifier: Modifier,
+        description: String? = null,
+        textColor: Color = Color.Unspecified,
+        caption: String? = null,
+        onClick: () -> Unit
+    ) {
+        val sem = if (description != null) Modifier.semantics { contentDescription = description } else Modifier
+        Card(
+            onClick = onClick,
+            shape = RoundedCornerShape(10.dp),
+            modifier = keyModifier.then(sem)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
                 )
-            } else {
-              Column {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(WheelRowHeight * WHEEL_VISIBLE_ROWS),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Markierung der mittleren Zeile
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(WheelRowHeight)
-                    ) {}
-                    LazyColumn(
-                        state = listState,
-                        flingBehavior = rememberSnapFlingBehavior(listState, SnapPosition.Center),
-                        contentPadding = PaddingValues(
-                            vertical = WheelRowHeight * (WHEEL_VISIBLE_ROWS / 2)
-                        ),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(WHEEL_MAX + 1) { value ->
-                            val isSelected = value == selected
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(WheelRowHeight)
-                                    .clickable {
-                                        scope.launch { listState.animateScrollToItem(value) }
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    value.toString(),
-                                    style = if (isSelected) {
-                                        MaterialTheme.typography.titleLarge
-                                    } else {
-                                        MaterialTheme.typography.bodyLarge
-                                    },
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        }
+                if (caption != null) {
+                    Text(caption, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+        Column(modifier = Modifier.weight(3f), verticalArrangement = Arrangement.spacedBy(gap)) {
+            for (rowStart in listOf(7, 4, 1)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    for (digit in rowStart..rowStart + 2) {
+                        Key(digit.toString(), Modifier.weight(1f).height(KeyHeight)) { onDigit(digit) }
                     }
                 }
-                Text(
-                    stringResource(R.string.scoring_picker_more_hint, WHEEL_MAX),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                )
-              }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(if (keyboardMode) typed.toIntOrNull() ?: 0 else selected)
-            }) { Text(stringResource(R.string.common_ok)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = {
-                    if (!keyboardMode) typed = selected.toString()
-                    keyboardMode = !keyboardMode
-                }) {
-                    Text(
-                        stringResource(
-                            if (keyboardMode) R.string.scoring_picker_wheel
-                            else R.string.scoring_picker_keyboard
-                        )
-                    )
-                }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                Key("−", Modifier.weight(1f).height(KeyHeight), lessDescription, caption = captionText, onClick = onQwirkleLess)
+                Key("0", Modifier.weight(1f).height(KeyHeight)) { onDigit(0) }
+                Key("+", Modifier.weight(1f).height(KeyHeight), moreDescription, caption = captionText, onClick = onQwirkle)
             }
         }
-    )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
+            val tall = Modifier.fillMaxWidth().height(KeyHeight * 2 + gap)
+            Key("⌫", tall, deleteDescription, onClick = onDelete)
+            Key("✓", tall, confirmDescription, MaterialTheme.colorScheme.primary, onClick = onConfirm)
+        }
+    }
 }

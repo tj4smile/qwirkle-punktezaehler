@@ -186,15 +186,32 @@ fun HomeScreen(
                     if (last == null) {
                         Text(stringResource(R.string.home_no_game), style = body)
                     } else {
-                        Text(
-                            stringResource(R.string.home_last_date, Formatting.date(last.date)),
-                            style = body
-                        )
-                        Text(stringResource(R.string.home_last_points, last.totalPoints), style = body)
-                        Text(
-                            stringResource(R.string.home_last_qwirkles, last.totalQwirkles),
-                            style = body
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                stringResource(R.string.home_last_date, Formatting.date(last.date)),
+                                style = body
+                            )
+                            Text(
+                                stringResource(R.string.home_running_players, last.playerCount),
+                                style = body
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                stringResource(R.string.home_last_points, last.totalPoints),
+                                style = body
+                            )
+                            Text(
+                                stringResource(R.string.home_last_qwirkles, last.totalQwirkles),
+                                style = body
+                            )
+                        }
                     }
                     // Anzahl gespielter Partien, hervorgehoben
                     val darkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
