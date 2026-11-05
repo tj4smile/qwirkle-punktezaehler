@@ -69,7 +69,7 @@ gehört **nicht** ins Repository.
 
 Technik: Kotlin, Jetpack Compose, Material 3, Room, Navigation Compose,
 MVVM. Die ausführliche technische Dokumentation steht in
-[`docs/Qwirkle_Projektdokumentation.txt`](docs/Qwirkle_Projektdokumentation.txt).
+[`docs/Qwirkle_Projektdokumentation.2.14.txt`](docs/Qwirkle_Projektdokumentation.2.14.txt).
 
 ## Mitmachen
 
