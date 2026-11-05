@@ -3,9 +3,9 @@ QWIRKLE PUNKTEZÄHLER
 Technische Projektdokumentation
 ================================================================================
 
-Dokumentversion : 2.14
-Stand           : 03.11.2026
-App-Version     : 1.6 (versionCode 7)
+Dokumentversion : 2.17 (Entwicklungszweig neue-bedienung)
+Stand           : 05.11.2026
+App-Version     : 1.6 (versionCode 7); neue Bedienung ist für 1.7 (versionCode 8) vorgesehen
 Paketname       : com.thomas.qwirkle
 Plattform       : Android (Kotlin, Jetpack Compose)
 Sprache der UI  : Deutsch (bei deutscher Systemsprache), sonst Englisch
@@ -307,7 +307,6 @@ app/src/main/java/com/thomas/qwirkle/
 |   +-- HomeViewModel.kt
 |   +-- PlayerViewModel.kt
 |   +-- NewGameViewModel.kt
-|   +-- GameSetupViewModel.kt
 |   +-- ScoreEntryViewModel.kt
 |   +-- GameHistoryViewModel.kt
 |   +-- GameEndViewModel.kt
@@ -325,6 +324,7 @@ app/src/main/java/com/thomas/qwirkle/
     |   +-- SettingsProvider.kt       rememberSettings()
     |   +-- BackupProvider.kt         rememberBackupRepository()
     |   +-- PlaceholderScreen.kt      nur Entwicklungshilfe, nicht mehr genutzt
+    |   +-- PlayerTile.kt             SelectableTile (Kachel), TileGray, contrastColor()
     +-- theme/
     |   +-- Color.kt                  Markenfarben, playerColor()
     |   +-- Theme.kt                  QwirkleTheme (hell/dunkel)
@@ -332,7 +332,6 @@ app/src/main/java/com/thomas/qwirkle/
         +-- home/HomeScreen.kt
         +-- players/PlayerManagementScreen.kt
         +-- newgame/NewGameScreen.kt
-        +-- newgame/GameSetupScreen.kt
         +-- scoring/ScoreEntryScreen.kt
         +-- gameplay/GameHistoryScreen.kt
         +-- gameplay/GameEndScreen.kt
@@ -617,7 +616,6 @@ Historie und Statistik:
   HOME        "home"
   PLAYERS     "players"
   NEWGAME     "newgame"
-  SETUP       "setup/{playerIds}/{testGame}"   Reihenfolge & Farben
   STATISTICS  "statistics"
   DATA        "data"
   INFO        "info"
@@ -640,19 +638,16 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
    |-- Daten sichern & wiederherstellen --> DATA
    |-- Info & Spielregeln ---------------> INFO
    |-- Erinnerungskarte "Jetzt sichern" --> DATA
-   |-- Spiel fortsetzen (laufendes Spiel)-> HISTORY(id)
+   |-- Spiel fortsetzen (laufendes Spiel)-> SCORING(id)
    '-- Neues Spiel ----------------------> NEWGAME
-                                             |  Weiter
+                                             |  Spiel starten (Spiel wird angelegt)
                                              v
-                                         SETUP (Reihenfolge & Farben)
-                                             |  Los geht's (Spiel wird angelegt)
-                                             v
-                                         SCORING(id)  <------------+
-                                             |  Runde speichern    |
-                                             v                     | Runde
-                                         HISTORY(id) --------------+ hinzufügen
-                                             |  Beenden
-                                             v
+                                         SCORING(id)  <-----------+
+                                          |    |  Rundenübersicht |  Zurück
+                                          |    v                  |
+                                          |  HISTORY(id) ---------+
+                                          |  Beenden
+                                          v
                                          GAMEEND(id)
                                              |  Endauswertung anzeigen
                                              v
@@ -661,7 +656,8 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
                                              v
                                            HOME
 
-  Zusätzlich: SCORING hat ebenfalls "Beenden" -> GAMEEND (ab Runde 2).
+  "Runde speichern" bleibt in SCORING (neue, leere Runde, Liste springt nach oben).
+  HISTORY hat ebenfalls "Beenden" -> GAMEEND.
   HISTORY -> EDITROUND(gameId, roundId) durch Antippen einer Rundenzeile;
   nach "Änderung speichern" oder Zurück geht es per popBackStack zurück zu
   HISTORY.
@@ -669,11 +665,10 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
 
 9.3 Rückstapel (Back Stack)
 ---------------------------
-  - NEWGAME -> SETUP -> SCORING: beim Start wird NEWGAME (samt SETUP) per
-    popUpTo entfernt.
-  - SCORING -> HISTORY und HISTORY -> SCORING: der jeweils verlassene
-    Bildschirm wird per popUpTo entfernt. Der Stapel bleibt dadurch flach
-    (HOME -> aktueller Spielbildschirm).
+  - NEWGAME -> SCORING: beim Start wird NEWGAME per popUpTo entfernt.
+  - SCORING -> HISTORY (Karte "Rundenübersicht") wird normal gestapelt; Zurück
+    und "Weiter zur Erfassung" führen per popBackStack zu SCORING. Der
+    ScoreEntryViewModel bleibt dabei erhalten.
   - GAMEEND und RESULTS werden normal gestapelt. Die Zurück-Taste führt von
     RESULTS zu GAMEEND (Endbonus kann geändert werden) und von GAMEEND zum
     letzten Spielbildschirm.
@@ -697,7 +692,8 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
     Punkte ohne Endspielbonus; Namen werden auf 12 Zeichen gekürzt. Berechnung
     in HomeViewModel.runningInfo (RunningGameInfo.of, getestet). Knöpfe "Spiel
     fortsetzen" und "Verwerfen" (mit Abfrage)
-  - Karte "Letztes Spiel": Datum, Gesamtpunkte, Qwirkles
+  - Karte "Letztes Spiel": Zeile 1 Datum (links) und Spieleranzahl (rechts), Zeile 2
+    Gesamtpunkte (links) und Qwirkles (rechts)
     (letztes beendetes Nicht-Testspiel) oder Hinweis "Noch kein Spiel".
     Darunter, zentriert als grüne Plakette hervorgehoben: "Gespielte Partien: N"
     (feste Farben GamesChip* in Color.kt, für Hell und Dunkel).
@@ -729,65 +725,73 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
   - Fehlermeldungen im Dialog: "Bitte einen Namen eingeben.",
     "Maximal 20 Zeichen.", "Diesen Namen gibt es schon."
 
-10.3 NewGameScreen  (Wireframe 03)
-----------------------------------
-  - Checkbox-Liste aller aktiven Spieler mit Farbpunkt
-  - Anzeige "Ausgewählt: X von 7"; bei 7 sind weitere Spieler gesperrt
-  - Spielreihenfolge = Reihenfolge, in der die Spieler angetippt wurden
-  - Checkbox "Als Testspiel markieren" (nicht in Statistik)
-  - "Weiter" ab 2 Spielern aktiv; öffnet SETUP (10.3a). Das Spiel wird noch
-    nicht angelegt.
-  - Ohne Spieler: Hinweistext und Knopf "Spieler verwalten"
+10.3 NewGameScreen  (Wireframe 03, überarbeitet)
+------------------------------------------------
+  - Spielernamen als Kacheln, zwei pro Zeile (LazyVerticalGrid), beliebig viele
+    Zeilen. Nicht gewählt: neutrales Grau (TileGray, hebt sich von hellem und
+    dunklem Design ab). Gewählt: Kachel in Spielerfarbe, Schrift schwarz oder
+    weiß je nach Helligkeit (contrastColor), Nummer der Spielreihenfolge oben links.
+  - Spielreihenfolge = Reihenfolge, in der die Spieler angetippt wurden.
+  - Doppelte Farben werden bei der Auswahl sofort aufgelöst
+    (PlayerColors.uniqueColors: erste Verwendung bleibt, weitere bekommen eine
+    freie Farbe) und die Kachel zeigt die endgültige Farbe.
+  - "Ausgewählt: X von 7"; bei 7 sind weitere Kacheln gesperrt.
+  - Checkbox "Als Testspiel markieren".
+  - "Spiel starten" ab 2 Spielern: speichert geänderte Farben DAUERHAFT am
+    Spieler (changePlayerColor), legt das Spiel an (startGame) und öffnet
+    SCORING. Der frühere Bildschirm "Reihenfolge & Farben" entfällt.
+  - Ohne Spieler: Hinweistext und Knopf "Spieler verwalten".
 
-10.3a GameSetupScreen  "Reihenfolge & Farben"
----------------------------------------------
-  Erscheint nach "Weiter" im NewGameScreen und vor der ersten Runde.
-  - Liste der gewählten Spieler in Spielreihenfolge: Nummer, Farbpunkt, Name,
-    Pfeile nach oben/unten (mit Canvas gezeichnet; Drag & Drop ist eine
-    mögliche spätere Erweiterung).
-  - Beim Öffnen werden doppelte Farben automatisch ersetzt (erste Verwendung
-    bleibt, weitere bekommen eine freie Farbe; bei höchstens 7 Spielern gibt
-    es immer genug). Ein Hinweis zeigt, dass das passiert ist.
-  - Antippen des Farbpunkts öffnet die Farbauswahl. Ist die gewählte Farbe
-    schon an einen anderen Spieler im Spiel vergeben, tauschen beide ihre
-    Farben; so kommt keine Farbe doppelt vor.
-  - "Los geht's": speichert geänderte Farben DAUERHAFT am Spieler
-    (changePlayerColor; keine Schemaänderung, keine Migration), legt das Spiel
-    mit der gewählten Reihenfolge an (startGame) und öffnet SCORING. NEWGAME
-    und SETUP werden vom Rückstapel entfernt.
-  - Zurück führt zu NEWGAME; die Auswahl dort bleibt erhalten.
-  - Spieler, die nicht im Spiel sind, behalten ihre Farbe; in der
-    Spielerverwaltung dürfen weiterhin mehrere Spieler dieselbe Farbe haben.
-
-10.4 ScoreEntryScreen  (Wireframe 04)
--------------------------------------
-  - Kopf: Zurück-Pfeil und "Runde N"
-  - Spaltenüberschriften "Punkte" und "Qwirkles"
-  - Pro Spieler eine Zeile (Karte): Farbpunkt + Name (einzeilig, bei Platzmangel
-    gekürzt), Punkte-Knopf (72 dp, startet mit 0), Qwirkle-Zähler (− Zahl +,
-    höchstens 3 pro Runde, MAX_QWIRKLES) mit Bonus darunter ("+12")
-  - Punkteingabe: Antippen des Punkte-Knopfs öffnet einen Dialog mit einem
-    Zahlenrad von 0 bis 20 (drehen oder Zahl antippen, Einrasten in der Mitte).
-    "Tastatur" schaltet auf Zahleneingabe um (bis 2 Stellen, für Werte über 20;
-    ein Hinweis im Rad-Modus nennt das; ist der aktuelle Wert größer als 20, öffnet der Dialog gleich mit der
-    Tastatur), "Rad" schaltet zurück. "OK" übernimmt, "Abbrechen" verwirft.
-  - Karten und Knöpfe liegen in einer gemeinsamen scrollbaren Liste. Am Ende:
-    Hinweis "Punkte bitte ohne Qwirkle-Bonus eintragen ...", "Runde speichern"
-    und "Beenden" (erst ab einer gespeicherten Runde aktiv)
+10.4 ScoreEntryScreen  (Wireframe 04, überarbeitet in 2.15-2.17)
+-----------------------------------------------------------------
+  Rundenerfassung für das laufende Spiel; bleibt nach "Runde speichern" auf dem
+  Bildschirm (neue, leere Runde, Liste springt nach oben, Cursor beim ersten Spieler).
+  - Kopf: Zurück-Pfeil (-> Startseite) und "Runde N"; Spaltenüberschriften
+    "Punkte" und "Qwirkles".
+  - Pro Spieler eine dezente Standardkarte: Farbpunkt, Name (einzeilig),
+    darunter kleine Zwischensumme ("Summe N" = Punkte + Qwirkle-Bonus, mit "✓"
+    davor, sobald der Spieler bestätigt ist), Punktefeld (72 dp, nur Anzeige),
+    Qwirkle-Zähler (nur Anzeige, mit Bonus darunter, z. B. "+6").
+  - Markierung des Spielers am Cursor ausschließlich am Punktefeld: grüne
+    Tönung (Farben der Partien-Plakette) und kräftigerer Rahmen. Antippen einer
+    Karte setzt den Cursor dorthin.
+  - Reihenfolge: Pfeile ▲/▼ links neben dem Punktefeld, solange in Runde 1
+    noch nichts eingegeben ist (keine Ziffer, kein Q, kein ✓, keine
+    gespeicherte Runde, nicht im Bearbeiten-Modus). Danach verschwinden sie.
+    Die neue Reihenfolge wird sofort gespeichert (GamePlayer.position).
+  - Nummernpad (eigenes Composable, keine Systemtastatur), fest am unteren Rand.
+    Tasten sind Standardkarten (gleiche Farben wie die Spielerkarten):
+        7 8 9   | ⌫  (Ziffer löschen, 2 Reihen hoch)
+        4 5 6   |
+        1 2 3   | ✓  (bestätigen und weiter, 2 Reihen hoch)
+        − 0 +   |    ("−"/"+" mit kleinem Zusatz "Qwirkle")
+    Ziffern: höchstens 2 Stellen; die erste Ziffer nach dem Setzen des
+    Cursors ersetzt den alten Wert. "+" erhöht die Qwirkles des Spielers am
+    Cursor (höchstens 3), "−" verringert sie. ✓ bestätigt den Spieler (er
+    bekommt ausdrücklich seine Eingabe, auch 0) und setzt den Cursor zum
+    nächsten; nach dem letzten bleibt er beim letzten.
+  - Statuszeile über dem Pad: "Qwirkles im Spiel bisher: X" (alle gespeicherten
+    Runden plus die laufende Runde; beim Bearbeiten ohne die bearbeitete Runde).
+  - Unterhalb der Karten (scrollbar): Hinweis "Punkte bitte ohne Qwirkle-Bonus
+    eintragen ...", "Runde speichern", Karte "Rundenübersicht" (-> HISTORY, ab
+    einer gespeicherten Runde aktiv), "Beenden" (-> GAMEEND, ab einer Runde aktiv;
+    sonst Hinweis). Die Liste scrollt automatisch zum Spieler am Cursor.
+  - Sind beim Speichern nicht alle Spieler mit ✓ bestätigt, fragt ein Dialog
+    nach ("Trotzdem speichern?"). Nicht beim Bearbeiten.
+  - Laufende Runde (Eingaben, Cursor, bestätigte Spieler) wird per
+    SavedStateHandle gesichert und übersteht das Beenden der App durch das
+    System. Während der Erfassung bleibt der Bildschirm an (keepScreenOn).
   - Bearbeiten-Modus (roundId gesetzt, Aufruf aus dem Spielverlauf): derselbe
-    Bildschirm, Titel "Runde N bearbeiten", die gespeicherten Punkte und
-    Qwirkles der Runde sind vorbelegt, Knopf "Änderung speichern"; "Beenden"
-    entfällt. Bis die Werte geladen sind, ist Speichern gesperrt. Es lassen
-    sich nur Punkte und Qwirkles ändern; Löschen einer Runde in der Mitte gibt
-    es bewusst nicht (nur "Letzte Runde löschen"). Nur in laufenden Spielen:
-    Das Repository (updateRound) lehnt Änderungen an gespeicherten Spielen mit
-    IllegalStateException ab, damit sich Statistik und Rekorde nicht
-    nachträglich verschieben.
-  - Alle Punktewerte sind mit 0 vorbelegt, "Runde speichern" ist daher immer
-    möglich. Wer nichts ändert, speichert 0 Punkte und 0 Qwirkles.
-  - Nach dem Speichern: HISTORY
-  - Ist noch keine Runde gespeichert, steht unter "Beenden" ein Hinweis, warum
-    der Knopf gesperrt ist.
+    Bildschirm, Titel "Runde N bearbeiten", gespeicherte Punkte und Qwirkles
+    vorbelegt, Knopf "Änderung speichern"; "Rundenübersicht" und "Beenden"
+    entfallen, keine Reihenfolgepfeile. Bis die Werte geladen sind, ist
+    Speichern gesperrt. Es lassen sich nur Punkte und Qwirkles ändern; Löschen
+    einer Runde in der Mitte gibt es bewusst nicht (nur "Letzte Runde
+    löschen"). Das Repository (updateRound) lehnt Änderungen an gespeicherten
+    Spielen mit IllegalStateException ab, damit sich Statistik und Rekorde
+    nicht nachträglich verschieben.
+  - Alle Punktewerte sind mit 0 vorbelegt; wer nichts ändert, speichert 0 Punkte
+    und 0 Qwirkles.
 
 10.5 GameHistoryScreen  (Wireframe 05)
 --------------------------------------
@@ -801,17 +805,20 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
     enthalten).
   - Eine Rundenzeile antippen öffnet die Bearbeitung dieser Runde (EDITROUND,
     siehe 10.4). Die Summenzeile ist nicht antippbar.
-  - Unten: "Runde hinzufügen" -> SCORING, darunter in einer Zeile
+  - Zurück-Pfeil führt zur Rundenerfassung (SCORING). Unten: "Weiter zur
+    Erfassung" (ebenfalls zurück zu SCORING), darunter in einer Zeile
     "Letzte Runde löschen" (mit Sicherheitsabfrage, nur die letzte Runde) und
     "Beenden" -> GAMEEND (erst ab einer Runde). Solange keine Runde
     gespeichert ist, steht darunter der Hinweis, dass Beenden erst nach
     einer gespeicherten Runde möglich ist (gilt auch in 10.4).
 
-10.6 GameEndScreen  (Wireframe 06)
-----------------------------------
-  - "Wer hat den letzten Stein gelegt?" als Auswahlliste (Radio-Buttons),
-    zusätzlich "Niemand (kein Endspielbonus)"
-  - Auswahl ist Pflicht (Knopf deaktiviert, bis gewählt wurde)
+10.6 GameEndScreen  (Wireframe 06, überarbeitet)
+------------------------------------------------
+  - "Wer hat den letzten Stein gelegt?" als Kacheln (zwei pro Zeile) in der
+    Spielerfarbe, wenn gewählt (sonst grau); darunter über die ganze Breite
+    "Niemand (kein Endspielbonus)".
+  - Erneutes Antippen hebt die Wahl auf. Auswahl ist Pflicht (Knopf deaktiviert,
+    bis gewählt wurde).
   - Bei Spielerwahl Anzeige "Bonus +6 Punkte"
   - "Endauswertung anzeigen": speichert die Wahl (setEndBonusPlayer) und
     öffnet RESULTS
@@ -931,17 +938,17 @@ werden als StateFlow bereitgestellt (stateIn mit WhileSubscribed(5000)).
     players, selectedIds (List<Long>, Reihenfolge = Spielreihenfolge),
     isTestGame
     togglePlayer(id), setTestGame(value),
-    continueToSetup(onNext)   prüft die Auswahl, legt noch kein Spiel an
+    colors (Spieler-ID -> eindeutige Farbe der Gewählten)
+    start(onStarted)   speichert geänderte Farben, legt das Spiel an
+    (uniqueColors liegt in util/PlayerColors, getestet)
 
-  GameSetupViewModel(playerIds, isTestGame)
-    entries (List<SetupEntry(player, colorIndex)>), isLoading,
-    colorsAdjusted, isStarting
-    moveUp(index), moveDown(index), setColor(playerId, colorIndex) (tauscht
-    bei belegter Farbe), start(onStarted)
-    uniqueColors(colors)      reine Funktion im companion object (getestet)
-
-  ScoreEntryViewModel(gameId, roundId = null)
-    players, roundCount, inputs (Map<Long, ScoreInput>), isSaving
+  ScoreEntryViewModel(gameId, roundId = null, savedState)
+    players, roundCount, inputs (Map<Long, ScoreInput>), isSaving,
+    activeIndex (Cursor), confirmed (Set<Long>), orderLocked,
+    savedQwirkles (Qwirkles der gespeicherten Runden)
+    pressDigit(d), pressDelete(), pressQwirkle(), pressQwirkleLess(),
+    pressConfirm(), setCursor(index), unconfirmedCount(),
+    movePlayer(playerId, delta)  (nur solange orderLocked = false)
     setPoints(playerId, text), changeQwirkles(playerId, delta),
     save(onSaved)  (neue Runde oder, mit roundId, Änderung der Runde)
     isEditing, isLoading, editedRoundNumber (Bearbeiten-Modus)
@@ -1089,11 +1096,12 @@ fortsetzen" an, das zum Spielverlauf führt.
                                             bietet "Spiel fortsetzen"
   Punktefelder                              Mit 0 vorbelegt (früher: alle
                                             Felder mussten ausgefüllt werden)
-  Punkteingabe                              Zahlenrad 0-20 im Dialog, dazu
-                                            Umschalter auf die Tastatur
-                                            (bis 2 Stellen, also max. 99)
-  Reihenfolge und Farben vor Spielstart     Eigener Bildschirm, Pfeile statt
-                                            Drag & Drop; Spiel wird erst danach
+  Punkteingabe                              Eigenes Nummernpad (max. 2 Stellen,
+                                            also max. 99) mit Q+/Q-, Bestätigen
+                                            und Löschen; Zahlenrad entfällt
+  Reihenfolge und Farben vor Spielstart     Kein eigener Bildschirm mehr: Farben
+                                            werden bei der Auswahl aufgelöst,
+                                            Reihenfolge per Pfeile in Runde 1
                                             angelegt; Farben im Spiel eindeutig
                                             (Tausch), dauerhaft am Spieler
                                             gespeichert
@@ -1249,7 +1257,8 @@ Export/Import.
 --------------------------------------------------------------
   GameRulesTest, GameCalculationsTest, ValidationTest, PlayerColorsTest,
   FormattingTest (Datum deutsch/englisch/französisch, Prozent),
-  GameSetupViewModelTest (eindeutige Farben), RunningGameInfoTest
+  PlayerColorsUniqueTest (eindeutige Farben), ScoreInputLogicTest
+  (Nummernpad-Logik: Ziffern, Löschen, Cursor), RunningGameInfoTest
   (Infozeilen laufendes Spiel), BackupReminderTest
   (Erinnerungsregel), PlayerStatisticsTest (Siege, Gleichstand, Endbonus, inaktive Spieler,
   Sortierung), CsvExporterTest
@@ -1398,3 +1407,52 @@ alle Spiele der Nutzer gelöscht.
 ================================================================================
 ENDE DER DOKUMENTATION
 ================================================================================
+
+
+--------------------------------------------------------------------------------
+ÄNDERUNGEN 2.15 (neue Bedienung, Lieferung 1)
+--------------------------------------------------------------------------------
+  - Kachel-Auswahl im NewGameScreen (ui/components/PlayerTile.kt: SelectableTile,
+    TileGray, contrastColor), GameSetupScreen/-ViewModel und Route SETUP entfallen.
+  - uniqueColors liegt jetzt in util/PlayerColors.
+  - ScoreEntry: "Runde speichern" bleibt auf dem Bildschirm (inputs werden
+    zurückgesetzt); Karte "Rundenübersicht" (ab Runde 1 aktiv) zwischen
+    "Runde speichern" und "Beenden". HISTORY: Zurück -> SCORING.
+  - Pfeile ▲/▼ links neben dem Punktefeld, solange in Runde 1 noch nichts
+    eingegeben wurde (ScoreEntryViewModel.orderLocked, movePlayer). Neue Query
+    GamePlayerDao.updatePosition/reorder, GameRepository.reorderPlayers.
+    Keine Schemaänderung, keine Migration.
+  - GameEndScreen: Spielerkacheln in Spielerfarbe, erneutes Antippen hebt die
+    Wahl auf (GameEndViewModel.select schaltet um).
+  - "Spiel fortsetzen" öffnet jetzt die Rundenerfassung.
+
+ÄNDERUNGEN 2.16 (neue Bedienung, Lieferung 2)
+  - Startseite, Karte "Letztes Spiel": Datum und Spieleranzahl in einer Zeile,
+    Gesamtpunkte und Qwirkles in einer Zeile.
+  - Eigenes Nummernpad im ScoreEntryScreen (keine Systemtastatur): Ziffern 0-9
+    (max. 2 Stellen), Q (unten links, +1 Qwirkle), ✓ (unten rechts: bestätigt
+    den Spieler am Cursor, Cursor zum nächsten, nach dem letzten bleibt er dort),
+    ⌫ (letzte Stelle löschen). Qwirkles verringern nur über "−" in der Karte.
+  - Cursor: Index activeIndex im ScoreEntryViewModel, beginnt jede Runde beim
+    ersten Spieler; Antippen einer Karte setzt ihn. Die erste Ziffer ersetzt
+    den alten Wert (typingId). Aktive Karte hervorgehoben, bestätigte Spieler
+    mit "✓", kleine Zwischensumme (Punkte + Qwirkle-Bonus) in der Karte.
+  - Pfeile (Reihenfolge) verschwinden bei der ersten Ziffer, Q oder ✓ in Runde 1.
+  - Speichern mit unbestätigten Spielern fragt nach (nicht beim Bearbeiten).
+  - Laufende Runde (Eingaben, Cursor, bestätigte Spieler) wird per
+    SavedStateHandle gesichert (keine DB-Änderung). Bildschirm bleibt während
+    der Erfassung an (keepScreenOn).
+  - Das Zahlenrad-Dialog und die zugehörigen Strings entfallen.
+  - Reine Logik in util/ScoreInputLogic (appendDigit, deleteLast, nextCursor),
+    getestet in ScoreInputLogicTest.
+
+ÄNDERUNGEN 2.17 (Feinschliff der neuen Bedienung)
+  - Endgültiges Nummernpad: Spielerkarten wieder in dezenten Standardfarben,
+    Pad-Tasten in denselben Farben, Punktefeld des aktiven Spielers grün.
+    Layout: Ziffern 7-9/4-6/1-3, unten "−" 0 "+" (Qwirkle weniger/mehr),
+    rechts oben ⌫ und rechts unten ✓. Das "−" in der Karte und die Q-Taste
+    neben der 0 aus 2.16 entfallen; der Qwirkle-Zähler in der Karte ist nur
+    noch Anzeige.
+  - Statuszeile "Qwirkles im Spiel bisher: X" über dem Pad.
+  - Tasten "+"/"−" mit kleinem Zusatz "Qwirkle".
+  - Offene Ideen: kurze Vibration beim Tastendruck.
