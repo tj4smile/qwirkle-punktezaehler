@@ -17,13 +17,20 @@ keine Datenweitergabe.
   Spielreihenfolge; doppelte Farben werden automatisch vermieden
 - Punkte pro Runde schnell erfassen mit eigenem Nummernpad (Ziffern, Qwirkle
   hinzufügen/entfernen, Bestätigen springt zum nächsten Spieler), Bonus wird
-  automatisch addiert; Spielreihenfolge lässt sich vor der ersten Eingabe noch ändern
+  automatisch addiert; Spielreihenfolge lässt sich vor der ersten Eingabe noch ändern;
+  „Runde speichern“ auch direkt unter dem Pad
+- Zwei Eingabevarianten, beim Anlegen eines Spiels wählbar: **Standard**
+  (+6 je Qwirkle) und **Alternativ** (jedes Qwirkle zählt 12, eingegeben werden
+  nur die Punkte der Reihen quer dazu)
+- Ton bei einem Qwirkle (Standard-Benachrichtigungston des Geräts, abschaltbar)
 - Rundenübersicht jederzeit per Karte erreichbar, laufende Runde geht auch bei
   App-Abbruch nicht verloren
 - Spielverlauf als Tabelle, einzelne Runden nachträglich korrigieren
-- Endspielbonus, Endauswertung mit Platzierungen
+- Endspielbonus, Endauswertung mit Platzierungen sowie Gesamtsumme aller Punkte
+  und aller Qwirkles
 - Statistik: gespielte Partien, Rekorde, Spielerstatistik (Siege, Siegquote,
-  Durchschnitt, Bestwert, Qwirkles)
+  Durchschnitt, Bestwert, Qwirkles); gespeicherte Spiele lassen sich mit allen
+  Runden ansehen (nur lesen)
 - Testspiele, die nicht in die Statistik zählen
 - Sicherung und Wiederherstellung (JSON), Export für Excel (CSV)
 - Erinnerung an eine Sicherung, Info-Seite mit Spielregeln-Kurzfassung
@@ -52,8 +59,8 @@ Daten beim Deinstallieren verloren.
 <p>
   <img src="docs/screenshots/Screenshot_Startbildschirm.png" width="220">
   <img src="docs/screenshots/Screenshot_Langzeitstatistik.png" width="220">
-  <img src="docs/screenshots/Screenshot_NeuesSpiel_alt.png" width="220">
-  <img src="docs/screenshots/Screenshot_Punkteeingabe_alt.png" width="220">
+  <img src="docs/screenshots/Screenshot_NeuesSpiel.png" width="220">
+  <img src="docs/screenshots/Screenshot_Punkteeingabe.png" width="220">
   <img src="docs/screenshots/Screenshot_SpielerVerwaltung.png" width="220">
 </p>
 
@@ -73,7 +80,7 @@ gehört **nicht** ins Repository.
 
 Technik: Kotlin, Jetpack Compose, Material 3, Room, Navigation Compose,
 MVVM. Die ausführliche technische Dokumentation steht in
-[`docs/Qwirkle_Projektdokumentation.2.20.txt`](docs/Qwirkle_Projektdokumentation.2.17.txt).
+[`docs/Qwirkle_Projektdokumentation.2.20.txt`](docs/Qwirkle_Projektdokumentation.2.20.txt).
 
 ## Mitmachen
 
@@ -92,6 +99,8 @@ Der Quellcode steht unter der [MIT-Lizenz](LICENSE). Die verwendeten Bibliotheke
 A simple, ad-free score keeper for the tile game **Qwirkle** (Android 8.0+).
 All data stays on your device: no account, no internet access needed, no data
 sharing. Features: player management, playing order and colors, quick score entry with a built-in number pad,
+two scoring variants (standard +6 per Qwirkle, or alternative 12 per Qwirkle),
+optional sound on a Qwirkle, read-only view of saved games,
 round history with corrections, end bonus, statistics, backup/restore (JSON),
 CSV export, German and English UI.
 
