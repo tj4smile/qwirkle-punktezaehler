@@ -1,11 +1,13 @@
 package com.thomas.qwirkle.data.database
 
 import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Alle Datenbank-Migrationen in aufsteigender Reihenfolge.
  *
- * Aktuell gibt es nur Version 1, also noch keine Migration.
+ * Version 2: neue Spalte game_history.qwirkleBonus (Eingabevariante "Alternativ", 12 je Qwirkle).
+ * Alle bisherigen Spiele bekommen 6 und rechnen unverändert weiter.
  *
  * SO FÜHRST DU EINE SCHEMA-ÄNDERUNG DURCH (z. B. neue Spalte in "players"):
  *  1. Entity ändern.
@@ -30,5 +32,11 @@ import androidx.room.migration.Migration
  * alle Spiele der Nutzer löschen.
  */
 object Migrations {
-    val ALL: Array<Migration> = arrayOf()
+    val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE game_history ADD COLUMN qwirkleBonus INTEGER NOT NULL DEFAULT 6")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2)
 }

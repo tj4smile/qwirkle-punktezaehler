@@ -40,6 +40,7 @@ import com.thomas.qwirkle.ui.components.PlayerColorDot
 import com.thomas.qwirkle.ui.components.rememberRepository
 import com.thomas.qwirkle.ui.components.screenPadding
 import com.thomas.qwirkle.ui.theme.playerColor
+import com.thomas.qwirkle.util.GameRules
 import com.thomas.qwirkle.util.PlayerTotal
 import com.thomas.qwirkle.viewmodel.ResultViewModel
 
@@ -89,9 +90,30 @@ fun ResultScreen(
                         )
                     }
 
+                    if (current.game.qwirkleBonus != GameRules.QWIRKLE_BONUS) {
+                        Text(
+                            stringResource(
+                                R.string.variant_alternative_info, current.game.qwirkleBonus
+                            ),
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
                     current.ranking.forEach { (rank, total) ->
                         RankingRow(rank, total)
                     }
+
+                    // Summen über alle Spieler
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    TotalRow(
+                        stringResource(R.string.results_total_points),
+                        stringResource(R.string.results_points, current.totalPoints)
+                    )
+                    TotalRow(
+                        stringResource(R.string.results_total_qwirkles),
+                        current.totalQwirkles.toString()
+                    )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     Text(
@@ -133,6 +155,25 @@ fun ResultScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun TotalRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
         )
     }
 }

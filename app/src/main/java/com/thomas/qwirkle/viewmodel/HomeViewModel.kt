@@ -10,6 +10,7 @@ import com.thomas.qwirkle.data.entity.Player
 import com.thomas.qwirkle.data.model.RoundWithScores
 import com.thomas.qwirkle.data.repository.GameRepository
 import com.thomas.qwirkle.util.GameCalculations
+import com.thomas.qwirkle.util.GameRules
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -35,9 +36,13 @@ data class RunningGameInfo(
     companion object {
         const val MAX_NAME_LENGTH = 12
 
-        fun of(players: List<Player>, rounds: List<RoundWithScores>): RunningGameInfo {
+        fun of(
+            players: List<Player>,
+            rounds: List<RoundWithScores>,
+            qwirkleBonus: Int = GameRules.QWIRKLE_BONUS
+        ): RunningGameInfo {
             if (rounds.isEmpty()) return RunningGameInfo(0, 0, null, 0, false)
-            val totals = GameCalculations.playerTotals(players, rounds)
+            val totals = GameCalculations.playerTotals(players, rounds, qwirkleBonus = qwirkleBonus)
             val ranking = GameCalculations.ranking(totals)
             val top = ranking.firstOrNull()?.second
             val tied = ranking.count { it.first == 1 } > 1
@@ -75,7 +80,7 @@ class HomeViewModel(private val repository: GameRepository) : ViewModel() {
                 combine(
                     repository.getGamePlayers(game.id),
                     repository.getRoundsWithScores(game.id)
-                ) { players, rounds -> RunningGameInfo.of(players, rounds) }
+                ) { players, rounds -> RunningGameInfo.of(players, rounds, game.qwirkleBonus) }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

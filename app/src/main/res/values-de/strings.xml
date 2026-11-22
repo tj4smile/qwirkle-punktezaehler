@@ -209,7 +209,7 @@
     <string name="info_rules_end_title">Spielende</string>
     <string name="info_rules_end_text">Das Spiel endet, wenn der Beutel leer ist und ein Spieler alle seine Steine abgelegt hat. Dieser Spieler bekommt 6 Bonuspunkte. Wer die meisten Punkte hat, gewinnt.</string>
     <string name="info_rules_app_title">In dieser App</string>
-    <string name="info_rules_app_text">Trage in jeder Runde die Punkte ohne Qwirkle-Bonus ein und zähle die Qwirkles dazu. Die App addiert 6 Punkte pro Qwirkle selbst. Den Endspielbonus von 6 Punkten wählst du beim Beenden aus. Das Spiel ist für 2 bis 4 Spieler gedacht, die App erlaubt bis zu 7. Genaue Regeln stehen in der Spielanleitung.</string>
+    <string name="info_rules_app_text">Trage in jeder Runde die Punkte ohne Qwirkle-Bonus ein und zähle die Qwirkles dazu. Die App addiert 6 Punkte pro Qwirkle selbst. Bei „Neues Spiel“ kannst du alternativ eine Eingabevariante wählen: Dann trägst du nur die Punkte der Querreihen ein, und jedes Qwirkle zählt 12 Punkte. Den Endspielbonus von 6 Punkten wählst du beim Beenden aus. Das Spiel ist für 2 bis 4 Spieler gedacht, die App erlaubt bis zu 7. Genaue Regeln stehen in der Spielanleitung.</string>
     <string name="info_rules_disclaimer">Dies ist eine unabhängige Zählhilfe und steht in keiner Verbindung zu den Rechteinhabern von Qwirkle.</string>
     <string name="info_licenses_title">Lizenzen</string>
     <string name="info_licenses_text">Die App nutzt Android Jetpack (Compose, Room, Navigation, Lifecycle) und Material Design. Diese Bibliotheken stehen unter der Apache License 2.0.</string>
@@ -223,4 +223,18 @@
     <string name="home_running_leader">Führt: %1$s (%2$d)</string>
     <string name="home_running_tie">Gleichstand (%1$d)</string>
     <string name="home_running_total">Gesamt: %1$d</string>
+    <string name="newgame_variant_title">Eingabevariante Punkte</string>
+    <string name="newgame_variant_standard">Standard\n+6 je Qwirkle</string>
+    <string name="newgame_variant_alternative">Alternativ\n12 je Qwirkle</string>
+    <string name="newgame_variant_hint_standard">Alle Punkte des Zugs eintragen. Pro Qwirkle werden %1$d Punkte Bonus addiert.</string>
+    <string name="newgame_variant_hint_alternative">Nur die Punkte der Querreihen eintragen. Jedes Qwirkle zählt %1$d Punkte.</string>
+    <string name="scoring_note_alternative">Nur die Punkte der Querreihen eintragen, ohne die Qwirkle-Reihe. Jedes Qwirkle zählt %1$d Punkte und wird automatisch addiert.</string>
+    <string name="history_legend_alternative">★ = Qwirkle in dieser Runde (%1$d Punkte je Qwirkle enthalten)</string>
+    <string name="variant_alternative_info">Eingabevariante: Alternativ (%1$d je Qwirkle)</string>
+    <string name="results_total_points">Gesamt aller Spieler</string>
+    <string name="results_total_qwirkles">Qwirkles gesamt</string>
+    <string name="settings_sound">Ton bei Qwirkle</string>
+    <string name="history_title_saved">Spiel vom %1$s</string>
+    <string name="history_end_bonus">Endspielbonus: %1$s (+%2$d)</string>
+    <string name="stats_list_hint">Ein Spiel antippen, um die Runden anzusehen.</string>
 </resources>

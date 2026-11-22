@@ -17,8 +17,8 @@ android {
         applicationId = "com.thomas.qwirkle"
         minSdk = 26
         targetSdk = 37
-        versionCode = 8
-        versionName = "1.7"
+        versionCode = 9
+        versionName = "1.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -60,5 +60,6 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
     androidTestImplementation(libs.androidx.room.testing)
 }

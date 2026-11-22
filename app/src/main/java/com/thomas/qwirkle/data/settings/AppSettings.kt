@@ -27,6 +27,15 @@ class AppSettings(context: Context) {
         _darkModePreferred.value = value
     }
 
+    private val _soundEnabled = MutableStateFlow(prefs.getBoolean(KEY_SOUND, true))
+    /** Ton bei einem eingegebenen Qwirkle (Standard: an). */
+    val soundEnabled: StateFlow<Boolean> = _soundEnabled
+
+    fun setSoundEnabled(value: Boolean) {
+        prefs.edit().putBoolean(KEY_SOUND, value).apply()
+        _soundEnabled.value = value
+    }
+
     private val _lastBackupAt = MutableStateFlow(prefs.getLong(KEY_LAST_BACKUP, 0L))
     val lastBackupAt: StateFlow<Long> = _lastBackupAt
 
@@ -59,5 +68,6 @@ class AppSettings(context: Context) {
         const val KEY_SNOOZE = "backup_snoozed_until"
         const val PREFS_NAME = "qwirkle_settings"
         const val KEY_DARK_MODE = "dark_mode_preferred"
+        const val KEY_SOUND = "sound_enabled"
     }
 }

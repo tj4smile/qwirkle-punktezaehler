@@ -31,6 +31,7 @@ import com.thomas.qwirkle.ui.components.BackButton
 import com.thomas.qwirkle.ui.components.PlayerColorDot
 import com.thomas.qwirkle.ui.components.rememberRepository
 import com.thomas.qwirkle.ui.components.screenPadding
+import androidx.compose.foundation.clickable
 import com.thomas.qwirkle.util.Formatting
 import com.thomas.qwirkle.util.PlayerStats
 import com.thomas.qwirkle.viewmodel.StatisticsViewModel
@@ -38,6 +39,7 @@ import com.thomas.qwirkle.viewmodel.StatisticsViewModel
 @Composable
 fun StatisticsScreen(
     onBack: () -> Unit,
+    onShowGame: (gameId: Long) -> Unit = {},
     viewModel: StatisticsViewModel = viewModel(
         factory = StatisticsViewModel.factory(rememberRepository())
     )
@@ -144,13 +146,19 @@ fun StatisticsScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 8.dp)
                     )
+                    Text(
+                        stringResource(R.string.stats_list_hint),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 if (games.isEmpty()) {
                     item { Text(stringResource(R.string.stats_list_empty)) }
                 } else {
                     items(games, key = { it.id }) { game ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onShowGame(game.id) },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {

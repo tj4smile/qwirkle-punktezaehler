@@ -48,10 +48,12 @@ class CsvExporterTest {
         id: Long = 10,
         finished: Boolean = true,
         test: Boolean = false,
-        endBonus: Long? = 2
+        endBonus: Long? = 2,
+        qwirkleBonus: Int = 6
     ) = GameHistory(
         id = id, date = oct26, playerCount = 2, totalPoints = 59, totalQwirkles = 3,
-        isTestGame = test, isFinished = finished, endBonusPlayerId = endBonus
+        isTestGame = test, isFinished = finished, endBonusPlayerId = endBonus,
+        qwirkleBonus = qwirkleBonus
     )
 
     /** Runde 1: Anna 10, Peter 20 (1 Qwirkle). Runde 2: Anna 5 (2 Qwirkles), Peter 0. */
@@ -198,5 +200,15 @@ class CsvExporterTest {
         val text = CsvExporter.build(data(), labels, ',')
 
         assertTrue(text.endsWith("\r\n"))
+    }
+
+    @Test
+    fun alternativeBonus_isUsedInBonusAndRoundTotalColumns() {
+        val result = lines(CsvExporter.build(data(game(qwirkleBonus = 12)), labels, ','))
+
+        // Peter, Runde 1: 20 Punkte, 1 Qwirkle -> Bonus 12, Rundenpunkte 32
+        assertTrue(result.any { it.endsWith(",20,1,12,32") })
+        // Anna, Runde 2: 5 Punkte, 2 Qwirkles -> Bonus 24, Rundenpunkte 29
+        assertTrue(result.any { it.endsWith(",5,2,24,29") })
     }
 }

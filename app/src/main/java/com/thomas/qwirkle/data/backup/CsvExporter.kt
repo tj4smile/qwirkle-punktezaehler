@@ -79,8 +79,8 @@ object CsvExporter {
                                 text(playersById[score.playerId]?.name ?: ""),
                                 score.points.toString(),
                                 score.qwirkles.toString(),
-                                GameRules.qwirkleBonus(score.qwirkles).toString(),
-                                GameRules.roundTotal(score.points, score.qwirkles).toString()
+                                GameRules.qwirkleBonus(score.qwirkles, game.qwirkleBonus).toString(),
+                                GameRules.roundTotal(score.points, score.qwirkles, game.qwirkleBonus).toString()
                             )
                         )
                     }

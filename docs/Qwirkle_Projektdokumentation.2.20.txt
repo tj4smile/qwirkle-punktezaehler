@@ -3,9 +3,9 @@ QWIRKLE PUNKTEZÄHLER
 Technische Projektdokumentation
 ================================================================================
 
-Dokumentversion : 2.17 (Entwicklungszweig neue-bedienung)
-Stand           : 05.11.2026
-App-Version     : 1.6 (versionCode 7); neue Bedienung ist für 1.7 (versionCode 8) vorgesehen
+Dokumentversion : 2.20
+Stand           : 18.11.2026
+App-Version     : 1.8 (versionCode 9)
 Paketname       : com.thomas.qwirkle
 Plattform       : Android (Kotlin, Jetpack Compose)
 Sprache der UI  : Deutsch (bei deutscher Systemsprache), sonst Englisch
@@ -191,8 +191,7 @@ Im <application>-Tag muss die eigene Application-Klasse eingetragen sein:
 
 3.5 Datenbank zurücksetzen (Entwicklung)
 ----------------------------------------
-Die Datenbank hat Version 1; Migrationen sind eingerichtet (Abschnitt 20),
-es gibt aber noch keine. Stammt die Datenbank auf dem Gerät aus einer frühen
+Die Datenbank hat Version 2 (Migration 1 -> 2 siehe Abschnitt 20). Stammt die Datenbank auf dem Gerät aus einer frühen
 Entwurfsphase und passt nicht zum aktuellen Schema, erscheint beim Start
 "Room cannot verify the data integrity". Dann die App einmal vom Gerät
 deinstallieren (oder den Speicher löschen). Ab der ersten Veröffentlichung
@@ -390,6 +389,9 @@ entfernt werden.
   isTestGame        Boolean     Testspiel, wird nicht in Statistik gezählt
   isFinished        Boolean     false = läuft noch, true = gespeichert
   endBonusPlayerId  Long?       Spieler mit Endspielbonus, null = niemand
+  qwirkleBonus      Int         Punkte je Qwirkle in diesem Spiel: 6 (Standard)
+                                oder 12 (Eingabevariante "Alternativ"); Default 6.
+                                Alle Berechnungen des Spiels nehmen diesen Wert.
 
 6.4 Tabelle game_players  (Entity GamePlayer)
 ---------------------------------------------
@@ -424,7 +426,7 @@ GameRules berechnet. Dadurch gibt es genau eine Stelle, an der die Regel steht.
 
 6.8 Datenbank
 -------------
-  AppDatabase  DATABASE_VERSION = 1, exportSchema = true, Dateiname "qwirkle.db"
+  AppDatabase  DATABASE_VERSION = 2, exportSchema = true, Dateiname "qwirkle.db"
   Entities     Player, GameHistory, GamePlayer, Round, RoundScore
   Migrationen  .addMigrations(*Migrations.ALL)  (siehe Abschnitt 20)
   Zugriff      AppDatabase.getInstance(context)  (thread-sicherer Singleton)
@@ -436,14 +438,19 @@ GameRules berechnet. Dadurch gibt es genau eine Stelle, an der die Regel steht.
 
 7.1 Konstanten (util/GameRules)
 -------------------------------
-  QWIRKLE_BONUS = 6      Punkte pro Qwirkle
+  QWIRKLE_BONUS = 6      Punkte pro Qwirkle (Standard)
+  ALTERNATIVE_QWIRKLE_BONUS = 12   Eingabevariante "Alternativ"
   END_BONUS     = 6      Endspielbonus
   MIN_PLAYERS   = 2
   MAX_PLAYERS   = 7
 
 7.2 Rundenpunkte
 ----------------
-  roundTotal(points, qwirkles) = points + qwirkles * 6
+  roundTotal(points, qwirkles, bonusPerQwirkle = 6) = points + qwirkles * bonusPerQwirkle
+  Der Bonus kommt aus game_history.qwirkleBonus des jeweiligen Spiels.
+  Standard: eingetragen werden alle Punkte des Zugs ohne Bonus (inkl. Qwirkle-
+  Reihe), Bonus 6. Alternativ: nur Punkte der Querreihen, Qwirkle zählt 12
+  (Beispiel: Eingabe 3 + 1 Qwirkle = 15).
 
 Beispiel: Anna gibt 18 Punkte ein und hat 2 Qwirkles.
   Bonus       = 2 * 6 = 12
@@ -624,6 +631,7 @@ Historie und Statistik:
   HISTORY     "history/{gameId}"    Spielverlauf
   GAMEEND     "gameend/{gameId}"    Spielende (Endspielbonus)
   RESULTS     "results/{gameId}"    Endauswertung
+  GAMEDETAIL  "gamedetail/{gameId}"  gespeichertes Spiel ansehen (nur lesen)
 
 Hilfsfunktionen: setup(ids, isTest), scoring(id), history(id), gameEnd(id),
 results(id). Das Argument gameId ist vom Typ Long (NavType.LongType);
@@ -707,6 +715,8 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
   - Schalter "Dunkles Design": nur wirksam, wenn das System hell ist. Ist das
     System dunkel, ist die App immer dunkel (der Schalter ist dann ohne
     Wirkung). Die Wahl wird in AppSettings gespeichert.
+  - Schalter "Ton bei Qwirkle" (AppSettings.soundEnabled, Standard an): schaltet
+    den Ton bei einem eingegebenen Qwirkle ein oder aus.
   - Wenn ein laufendes Spiel existiert, fragt "Neues Spiel" vorher nach, weil
     das laufende Spiel verworfen wird.
   - Layout: 28 dp eigener Abstand oben (plus 12 dp zentral, siehe Abschnitt 13), 20 dp zwischen den Elementen, größere Schrift
@@ -847,7 +857,13 @@ playerIds ist ein String "1,2,3" (Spielreihenfolge), testGame ein Boolean.
      Partie). Gelöschte (deaktivierte) Spieler werden nicht angezeigt.
      Berechnung siehe Abschnitt 10.10.
   4. Liste aller gespeicherten Spiele: "Datum | Punkte Pkt", Spieleranzahl
-     und Qwirkles, Knopf "Löschen" mit Sicherheitsabfrage
+     und Qwirkles, Knopf "Löschen" mit Sicherheitsabfrage. Antippen einer
+     Zeile öffnet die Rundenübersicht dieses Spiels nur zum Ansehen
+     (GAMEDETAIL, GameHistoryScreen mit readOnly = true): Titel "Spiel vom
+     <Datum>", Tabelle mit Summenzeile inklusive Endspielbonus, Zeile
+     "Endspielbonus: <Name> (+6)", keine Knöpfe, Rundenzeilen nicht antippbar,
+     kein Bearbeiten. Bei Spielen mit 12er-Eingabevariante steht die Zeile
+     "Eingabevariante: Alternativ (12 je Qwirkle)".
   Testspiele sind nie enthalten.
 
 10.9 DataScreen  "Daten & Sicherung"
@@ -1088,7 +1104,9 @@ fortsetzen" an, das zum Spielverlauf führt.
   Datenschicht                              Mittelweg: schlanke Entities, aber
                                             mit Relationen und Statistikmodell
   Qwirkle-Bonus                             Spieler gibt Punkte ohne Bonus ein,
-                                            die App addiert 6 pro Qwirkle
+                                            die App addiert 6 pro Qwirkle;
+                                            wählbar je Spiel: Alternativ (12
+                                            je Qwirkle, nur Querreihen eintragen)
   Dependency Injection                      Manuell über die Application-Klasse
   Punkteerfassung                           Alle Spieler untereinander auf
                                             einem Bildschirm
@@ -1154,8 +1172,8 @@ fortsetzen" an, das zum Spielverlauf führt.
 16. BEKANNTE EINSCHRÄNKUNGEN
 ================================================================================
 
-  - Datenbank: Version 1. Migrationen sind eingerichtet, aber noch keine
-    geschrieben. Jede Schemaänderung braucht Versionserhöhung, Migration und
+  - Datenbank: Version 2 (Migration 1 -> 2: Spalte qwirkleBonus). Jede
+    weitere Schemaänderung braucht Versionserhöhung, Migration und
     Test (Abschnitt 20).
   - Import ersetzt immer alle Daten; es gibt kein Zusammenführen von
     Sicherungen. Die CSV-Datei kann nicht importiert werden.
@@ -1302,11 +1320,11 @@ Attrappe; deshalb laufen diese Tests instrumentiert.
 
 Grundlage: DATABASE_VERSION (AppDatabase.kt), exportSchema = true, das
 Room-Gradle-Plugin mit schemaDirectory("$projectDir/schemas") und die Datei
-data/database/Migrations.kt (object Migrations, Liste ALL, aktuell leer).
+data/database/Migrations.kt (object Migrations, Liste ALL; enthält MIGRATION_1_2).
 
 Beim ersten Build entsteht
-  app/schemas/com.thomas.qwirkle.data.database.AppDatabase/1.json
-Diese Datei muss im Projekt (und in der Versionsverwaltung) bleiben.
+  app/schemas/com.thomas.qwirkle.data.database.AppDatabase/1.json (und 2.json)
+Diese Dateien müssen im Projekt (und in der Versionsverwaltung) bleiben.
 
 Ablauf bei einer Schemaänderung (Beispiel: neue Spalte):
   1. Entity ändern.
@@ -1342,13 +1360,15 @@ alle Spiele der Nutzer gelöscht.
            exportedAt (Millisekunden)
   Listen:  players, games, gamePlayers, rounds, roundScores
   endBonusPlayerId wird als null geschrieben, wenn nicht gesetzt.
+  formatVersion 2: games enthält qwirkleBonus. Sicherungen der Version 1
+  enthalten das Feld nicht und werden mit 6 gelesen.
 
   Prüfung beim Einlesen (bevor irgendetwas gelöscht wird):
     - gültiges JSON mit format = "qwirkle-backup"    sonst NOT_A_BACKUP
     - formatVersion nicht größer als bekannt          sonst NEWER_VERSION
     - alle Felder vorhanden und vom richtigen Typ     sonst NOT_A_BACKUP
     - IDs eindeutig, alle Verweise gültig, keine negativen Punkte, keine
-      leeren Namen, Rundennummer >= 1                 sonst INCONSISTENT
+      leeren Namen, Rundennummer >= 1, qwirkleBonus >= 1  sonst INCONSISTENT
   Dateien über 20 MB werden abgelehnt (TOO_LARGE).
 
 21.3 Wiederherstellung (BackupDao.replaceAll)
@@ -1456,3 +1476,58 @@ ENDE DER DOKUMENTATION
   - Statuszeile "Qwirkles im Spiel bisher: X" über dem Pad.
   - Tasten "+"/"−" mit kleinem Zusatz "Qwirkle".
   - Offene Ideen: kurze Vibration beim Tastendruck.
+
+ÄNDERUNGEN 2.18 (Eingabevariante, Gesamtsummen, zweiter Speichern-Knopf)
+  - Neues Spiel: Abschnitt "Eingabevariante Punkte" mit zwei Kacheln "Standard
+    (+6 je Qwirkle)" und "Alternativ (12 je Qwirkle)" plus Erklärtext. Vorgewählt:
+    Standard. Die Wahl gilt für das ganze Spiel (game_history.qwirkleBonus).
+  - Datenbank Version 2: Spalte game_history.qwirkleBonus INTEGER NOT NULL
+    DEFAULT 6; Migration 1 -> 2 (ALTER TABLE ... ADD COLUMN). Alle bisherigen
+    Spiele behalten 6. Runden bleiben für gespeicherte Spiele erhalten
+    (Entscheidung: keine Beschränkung auf Endergebnisse).
+  - Berechnung: GameRules/GameCalculations/PlayerStatistics/RunningGameInfo,
+    GameRepository.finishGame, CsvExporter und die Bildschirme nehmen den Bonus
+    des Spiels. Statistik mischt Spiele beider Varianten.
+  - Backup: formatVersion 2 mit qwirkleBonus; alte Sicherungen werden mit 6 gelesen.
+  - Rundenerfassung: Hinweistext und "+N"-Anzeige je nach Variante;
+    zusätzlicher Knopf "Runde speichern" unter dem Nummernpad (gleiche Logik und
+    gleiche Nachfrage bei unbestätigten Spielern wie der Knopf in der Liste).
+  - Spielverlauf und Endauswertung: Zeile "Eingabevariante: Alternativ (12 je
+    Qwirkle)" nur bei Alternativ; Legende angepasst.
+  - Endauswertung: Zeilen "Gesamt aller Spieler" (Punkte inkl. Qwirkle-Bonus und
+    Endspielbonus) und "Qwirkles gesamt".
+  - Info-Seite: ein Satz zur alternativen Eingabevariante.
+  - Tests: GameRulesTest, GameCalculationsTest, CsvExporterTest (Bonus 12),
+    BackupJsonTest (Roundtrip, Version 1 ohne Feld, ungültiger Bonus),
+    GameRepositoryTest (finishGame mit 12, Default 6), MigrationTest (1 -> 2).
+
+ÄNDERUNGEN 2.19 (Ton bei Qwirkle, gespeicherte Spiele ansehen)
+  - Ton: Bei "+" (Qwirkle mehr) in der Rundenerfassung spielt die App den
+    Standard-Benachrichtigungston des Android-Systems (RingtoneManager,
+    TYPE_NOTIFICATION, util/QwirkleSoundPlayer), nur wenn ein Qwirkle tatsächlich
+    dazukam (nicht beim Höchstwert 3). Der Ton folgt der Lautstärke und dem
+    Stumm-Modus des Geräts. Schalter "Ton bei Qwirkle" auf der Startseite
+    (Standard an).
+  - Gespeicherte Spiele ansehen: In der Statistik die Spielzeile antippen
+    (neue Route GAMEDETAIL), nur lesen (siehe 10.8). GameHistoryViewModel
+    liefert dafür zusätzlich das Spiel (Datum, Endbonus).
+  - Testspiele erscheinen weiterhin nicht in der Statistik und damit auch nicht
+    in dieser Ansicht.
+
+ÄNDERUNGEN 2.20 (Release 1.8)
+  - App-Version 1.8, versionCode 9 (Datenbank Version 2, Schema 2.json im
+    Repository unter app/schemas).
+  - Neu in 1.8: Eingabevariante "Alternativ" (12 je Qwirkle), Gesamtsummen in der
+    Endauswertung, zweiter Speichern-Knopf unter dem Nummernpad, Ton bei Qwirkle
+    (abschaltbar), gespeicherte Spiele in der Statistik ansehen (nur lesen).
+  - Build: app/build.gradle.kts enthält zusätzlich
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1").
+    Grund: Die Android-Tests der Migration (room-testing 2.8.5) brauchten
+    kotlinx-serialization 1.8.1, der App-Klassenpfad lieferte 1.7.3 (über
+    savedstate/lifecycle) und Gradle koppelt beide Klassenpfade
+    ("consistent resolution"). Symptom war ein AbstractMethodError bei
+    FieldBundle$$serializer in MigrationTest. Eine Version nur für
+    androidTestImplementation reicht nicht.
+  - Teststand: alle Unit- und Android-Tests grün, einschließlich Migration 1 -> 2.
+  - Hinweis: Update über die alte App installieren (nicht deinstallieren), vorher
+    JSON-Sicherung anlegen.

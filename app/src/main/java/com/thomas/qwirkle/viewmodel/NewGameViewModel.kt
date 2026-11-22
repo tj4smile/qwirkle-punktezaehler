@@ -39,6 +39,14 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
         }
     }
 
+    // Eingabevariante: Standard (6 je Qwirkle) oder Alternativ (12 je Qwirkle)
+    private val _qwirkleBonus = MutableStateFlow(GameRules.QWIRKLE_BONUS)
+    val qwirkleBonus: StateFlow<Int> = _qwirkleBonus
+
+    fun setQwirkleBonus(value: Int) {
+        _qwirkleBonus.value = value
+    }
+
     fun setTestGame(value: Boolean) {
         _isTestGame.value = value
     }
@@ -72,7 +80,7 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
                 selected.zip(unique)
                     .filter { (player, color) -> player.colorIndex != color }
                     .forEach { (player, color) -> repository.changePlayerColor(player, color) }
-                val gameId = repository.startGame(selected.map { it.id }, _isTestGame.value)
+                val gameId = repository.startGame(selected.map { it.id }, _isTestGame.value, _qwirkleBonus.value)
                 onStarted(gameId)
             } finally {
                 _isStarting.value = false

@@ -67,6 +67,7 @@ fun HomeScreen(
     val unfinishedGame by viewModel.unfinishedGame.collectAsState()
     val runningInfo by viewModel.runningInfo.collectAsState()
     val preferDark by settings.darkModePreferred.collectAsState()
+    val soundEnabled by settings.soundEnabled.collectAsState()
     val lastBackupAt by settings.lastBackupAt.collectAsState()
     val gamesAtBackup by settings.gamesAtBackup.collectAsState()
     val snoozedUntil by settings.backupSnoozedUntil.collectAsState()
@@ -304,6 +305,22 @@ fun HomeScreen(
                     checked = systemDark || preferDark,
                     onCheckedChange = { settings.setDarkModePreferred(it) },
                     enabled = !systemDark
+                )
+            }
+
+            // Ton bei einem Qwirkle (Standard-Systemton)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.settings_sound),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = soundEnabled,
+                    onCheckedChange = { settings.setSoundEnabled(it) }
                 )
             }
 

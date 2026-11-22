@@ -212,7 +212,7 @@
     <string name="info_rules_end_title">End of the game</string>
     <string name="info_rules_end_text">The game ends when the bag is empty and a player has placed all of their tiles. That player gets 6 bonus points. The player with the most points wins.</string>
     <string name="info_rules_app_title">In this app</string>
-    <string name="info_rules_app_text">In each round, enter the points without the Qwirkle bonus and count the Qwirkles. The app adds 6 points per Qwirkle itself. You choose the end bonus of 6 points when finishing. The game is meant for 2 to 4 players; the app allows up to 7. See the game instructions for the exact rules.</string>
+    <string name="info_rules_app_text">In each round, enter the points without the Qwirkle bonus and count the Qwirkles. The app adds 6 points per Qwirkle itself. Under \"New game\" you can instead choose an alternative entry variant: then you enter only the points of the cross rows, and each Qwirkle counts 12 points. You choose the end bonus of 6 points when finishing. The game is meant for 2 to 4 players; the app allows up to 7. See the game instructions for the exact rules.</string>
     <string name="info_rules_disclaimer">This is an independent score keeper and is not affiliated with the rights holders of Qwirkle.</string>
     <string name="info_licenses_title">Licenses</string>
     <string name="info_licenses_text">The app uses Android Jetpack (Compose, Room, Navigation, Lifecycle) and Material Design. These libraries are licensed under the Apache License 2.0.</string>
@@ -226,4 +226,18 @@
     <string name="home_running_leader">Leading: %1$s (%2$d)</string>
     <string name="home_running_tie">Tied (%1$d)</string>
     <string name="home_running_total">Total: %1$d</string>
+    <string name="newgame_variant_title">Score entry variant</string>
+    <string name="newgame_variant_standard">Standard\n+6 per Qwirkle</string>
+    <string name="newgame_variant_alternative">Alternative\n12 per Qwirkle</string>
+    <string name="newgame_variant_hint_standard">Enter all points of the move. %1$d bonus points are added per Qwirkle.</string>
+    <string name="newgame_variant_hint_alternative">Enter only the points of the cross rows. Each Qwirkle counts %1$d points.</string>
+    <string name="scoring_note_alternative">Enter only the points of the cross rows, without the Qwirkle row. Each Qwirkle counts %1$d points and is added automatically.</string>
+    <string name="history_legend_alternative">★ = Qwirkle in this round (%1$d points per Qwirkle included)</string>
+    <string name="variant_alternative_info">Entry variant: Alternative (%1$d per Qwirkle)</string>
+    <string name="results_total_points">Total of all players</string>
+    <string name="results_total_qwirkles">Qwirkles in total</string>
+    <string name="settings_sound">Sound on Qwirkle</string>
+    <string name="history_title_saved">Game of %1$s</string>
+    <string name="history_end_bonus">End bonus: %1$s (+%2$d)</string>
+    <string name="stats_list_hint">Tap a game to view its rounds.</string>
 </resources>

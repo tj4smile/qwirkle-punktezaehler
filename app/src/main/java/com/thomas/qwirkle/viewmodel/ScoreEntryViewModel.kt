@@ -10,6 +10,7 @@ import androidx.lifecycle.createSavedStateHandle
 import com.thomas.qwirkle.data.entity.Player
 import com.thomas.qwirkle.data.model.ScoreEntry
 import com.thomas.qwirkle.data.repository.GameRepository
+import com.thomas.qwirkle.util.GameRules
 import com.thomas.qwirkle.util.ScoreInputLogic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,6 +50,10 @@ class ScoreEntryViewModel(
 
     val players: StateFlow<List<Player>> = repository.getGamePlayers(gameId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Qwirkle-Bonus dieses Spiels (6 Standard, 12 Alternativ). */
+    val qwirkleBonus: StateFlow<Int> = repository.getQwirkleBonus(gameId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GameRules.QWIRKLE_BONUS)
 
     /** Anzahl bereits gespeicherter Runden (aktuelle Runde = roundCount + 1). */
     val roundCount: StateFlow<Int> = repository.getRoundsWithScores(gameId)
@@ -161,9 +166,12 @@ class ScoreEntryViewModel(
     }
 
     /** Q: ein Qwirkle mehr für den Spieler am Cursor (weniger über Q−). */
-    fun pressQwirkle() {
-        val id = activePlayerId() ?: return
+    fun pressQwirkle(): Boolean {
+        val id = activePlayerId() ?: return false
+        val before = _inputs.value[id]?.qwirkles ?: 0
         changeQwirkles(id, +1)
+        // true, wenn tatsächlich ein Qwirkle dazugekommen ist (Höchstwert nicht erreicht)
+        return (_inputs.value[id]?.qwirkles ?: 0) > before
     }
 
     /** Q−: ein Qwirkle weniger für den Spieler am Cursor. */

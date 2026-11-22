@@ -59,7 +59,7 @@ object PlayerStatistics {
             if (gamePlayers.isEmpty()) continue
 
             val totals = GameCalculations.playerTotals(
-                gamePlayers, entry.rounds, entry.game.endBonusPlayerId
+                gamePlayers, entry.rounds, entry.game.endBonusPlayerId, entry.game.qwirkleBonus
             )
             for ((rank, total) in GameCalculations.ranking(totals)) {
                 val acc = accs.getOrPut(total.player.id) { Acc(total.player) }

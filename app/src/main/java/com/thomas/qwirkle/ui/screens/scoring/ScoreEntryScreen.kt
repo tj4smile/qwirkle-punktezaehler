@@ -44,7 +44,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import com.thomas.qwirkle.ui.components.rememberSettings
+import com.thomas.qwirkle.util.QwirkleSoundPlayer
 import com.thomas.qwirkle.ui.theme.GamesChipContainerDark
 import com.thomas.qwirkle.ui.theme.GamesChipContainerLight
 import com.thomas.qwirkle.ui.theme.GamesChipContentDark
@@ -89,6 +92,12 @@ fun ScoreEntryScreen(
     val orderLocked by viewModel.orderLocked.collectAsState()
     val activeIndex by viewModel.activeIndex.collectAsState()
     val confirmed by viewModel.confirmed.collectAsState()
+    val qwirkleBonus by viewModel.qwirkleBonus.collectAsState()
+    val settings = rememberSettings()
+    val soundEnabled by settings.soundEnabled.collectAsState()
+    val context = LocalContext.current
+    val soundPlayer = remember { QwirkleSoundPlayer(context) }
+    DisposableEffect(soundPlayer) { onDispose { soundPlayer.release() } }
     val savedQwirkles by viewModel.savedQwirkles.collectAsState()
     val isEditing = roundId != null
     val listState = rememberLazyListState()
@@ -117,6 +126,13 @@ fun ScoreEntryScreen(
             onRoundSaved()
         }
     }
+
+    val onSaveClick: () -> Unit = {
+        if (viewModel.unconfirmedCount() > 0) showUnconfirmed = true else doSave()
+    }
+    val saveLabel = stringResource(
+        if (isEditing) R.string.scoring_save_changes else R.string.scoring_save
+    )
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -151,6 +167,7 @@ fun ScoreEntryScreen(
                         player = player,
                         isActive = index == activeIndex,
                         isConfirmed = player.id in confirmed,
+                        qwirkleBonus = qwirkleBonus,
                         showOrderArrows = !orderLocked,
                         canMoveUp = index > 0,
                         canMoveDown = index < players.lastIndex,
@@ -165,21 +182,19 @@ fun ScoreEntryScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            stringResource(R.string.scoring_note, GameRules.QWIRKLE_BONUS),
+                            if (qwirkleBonus == GameRules.QWIRKLE_BONUS) {
+                                stringResource(R.string.scoring_note, qwirkleBonus)
+                            } else {
+                                stringResource(R.string.scoring_note_alternative, qwirkleBonus)
+                            },
                             style = MaterialTheme.typography.bodySmall
                         )
                         Button(
-                            onClick = {
-                                if (viewModel.unconfirmedCount() > 0) showUnconfirmed = true else doSave()
-                            },
+                            onClick = onSaveClick,
                             enabled = canSave,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                stringResource(
-                                    if (isEditing) R.string.scoring_save_changes else R.string.scoring_save
-                                )
-                            )
+                            Text(saveLabel)
                         }
                         if (!isEditing) {
                             FilledTonalButton(
@@ -227,10 +242,24 @@ fun ScoreEntryScreen(
                 onDigit = viewModel::pressDigit,
                 onDelete = viewModel::pressDelete,
                 onQwirkleLess = viewModel::pressQwirkleLess,
-                onQwirkle = viewModel::pressQwirkle,
+                onQwirkle = {
+                    // Tusch (Systemton) nur, wenn wirklich ein Qwirkle dazukam
+                    if (viewModel.pressQwirkle() && soundEnabled) soundPlayer.play()
+                },
                 onConfirm = viewModel::pressConfirm,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
             )
+
+            // Zusätzlich unter dem Pad: nach dem Bestätigen der Spieler direkt speichern
+            Button(
+                onClick = onSaveClick,
+                enabled = canSave,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Text(saveLabel)
+            }
         }
     }
 
@@ -290,6 +319,7 @@ private fun ScoreColumnHeader() {
 @Composable
 private fun PlayerScoreCard(
     player: Player,
+    qwirkleBonus: Int,
     isActive: Boolean,
     isConfirmed: Boolean,
     showOrderArrows: Boolean,
@@ -303,7 +333,7 @@ private fun PlayerScoreCard(
     val darkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val activeColor = if (darkSurface) GamesChipContainerDark else GamesChipContainerLight
     val activeContent = if (darkSurface) GamesChipContentDark else GamesChipContentLight
-    val total = (input.points.toIntOrNull() ?: 0) + GameRules.qwirkleBonus(input.qwirkles)
+    val total = (input.points.toIntOrNull() ?: 0) + GameRules.qwirkleBonus(input.qwirkles, qwirkleBonus)
 
     // Dezente Standardkarte; der aktive Spieler wird nur am Punktefeld markiert
     Card(
@@ -379,7 +409,7 @@ private fun PlayerScoreCard(
                 Text("${input.qwirkles}", style = MaterialTheme.typography.titleLarge)
                 if (input.qwirkles > 0) {
                     Text(
-                        stringResource(R.string.scoring_bonus, GameRules.qwirkleBonus(input.qwirkles)),
+                        stringResource(R.string.scoring_bonus, GameRules.qwirkleBonus(input.qwirkles, qwirkleBonus)),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1

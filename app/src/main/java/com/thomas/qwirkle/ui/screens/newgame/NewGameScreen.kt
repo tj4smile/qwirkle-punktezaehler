@@ -47,6 +47,7 @@ fun NewGameScreen(
     val selectedIds by viewModel.selectedIds.collectAsState()
     val isTestGame by viewModel.isTestGame.collectAsState()
     val colors by viewModel.colors.collectAsState()
+    val qwirkleBonus by viewModel.qwirkleBonus.collectAsState()
 
     val selectedCount = selectedIds.size
     val isFull = selectedCount >= GameRules.MAX_PLAYERS
@@ -120,6 +121,41 @@ fun NewGameScreen(
                                     stringResource(R.string.newgame_order_hint)
                                 },
                                 style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                stringResource(R.string.newgame_variant_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 6.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                SelectableTile(
+                                    text = stringResource(R.string.newgame_variant_standard),
+                                    selected = qwirkleBonus == GameRules.QWIRKLE_BONUS,
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    onClick = { viewModel.setQwirkleBonus(GameRules.QWIRKLE_BONUS) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SelectableTile(
+                                    text = stringResource(R.string.newgame_variant_alternative),
+                                    selected = qwirkleBonus == GameRules.ALTERNATIVE_QWIRKLE_BONUS,
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    onClick = {
+                                        viewModel.setQwirkleBonus(GameRules.ALTERNATIVE_QWIRKLE_BONUS)
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Text(
+                                if (qwirkleBonus == GameRules.QWIRKLE_BONUS) {
+                                    stringResource(R.string.newgame_variant_hint_standard, qwirkleBonus)
+                                } else {
+                                    stringResource(R.string.newgame_variant_hint_alternative, qwirkleBonus)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 6.dp)
                             )
                             Row(
                                 modifier = Modifier

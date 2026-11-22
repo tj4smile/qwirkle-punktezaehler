@@ -52,8 +52,8 @@ Daten beim Deinstallieren verloren.
 <p>
   <img src="docs/screenshots/Screenshot_Startbildschirm.png" width="220">
   <img src="docs/screenshots/Screenshot_Langzeitstatistik.png" width="220">
-  <img src="docs/screenshots/Screenshot_NeuesSpiel.png" width="220">
-  <img src="docs/screenshots/Screenshot_Punkteeingabe.png" width="220">
+  <img src="docs/screenshots/Screenshot_NeuesSpiel_alt.png" width="220">
+  <img src="docs/screenshots/Screenshot_Punkteeingabe_alt.png" width="220">
   <img src="docs/screenshots/Screenshot_SpielerVerwaltung.png" width="220">
 </p>
 
@@ -73,7 +73,7 @@ gehört **nicht** ins Repository.
 
 Technik: Kotlin, Jetpack Compose, Material 3, Room, Navigation Compose,
 MVVM. Die ausführliche technische Dokumentation steht in
-[`docs/Qwirkle_Projektdokumentation.2.17.txt`](docs/Qwirkle_Projektdokumentation.2.17.txt).
+[`docs/Qwirkle_Projektdokumentation.2.20.txt`](docs/Qwirkle_Projektdokumentation.2.17.txt).
 
 ## Mitmachen
 

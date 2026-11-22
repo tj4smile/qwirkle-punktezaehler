@@ -191,4 +191,23 @@ class GameCalculationsTest {
         assertEquals(10, ranking[1].second.points)
         assertEquals(1, ranking[1].second.qwirkles)
     }
+
+    @Test
+    fun playerTotals_withAlternativeBonus_usesTwelvePerQwirkle() {
+        val totals = GameCalculations.playerTotals(
+            listOf(anna, peter), twoRounds, qwirkleBonus = 12
+        )
+
+        assertEquals(39, totals[0].points)   // 10 + (5 + 24)
+        assertEquals(2, totals[0].qwirkles)
+        assertEquals(32, totals[1].points)   // (20 + 12) + 0
+        assertEquals(1, totals[1].qwirkles)
+    }
+
+    @Test
+    fun playerTotals_defaultBonusIsSix() {
+        val totals = GameCalculations.playerTotals(listOf(anna, peter), twoRounds)
+
+        assertEquals(27, totals[0].points)
+    }
 }

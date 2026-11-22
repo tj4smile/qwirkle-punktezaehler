@@ -576,4 +576,26 @@ class GameRepositoryTest {
         assertEquals(59, stats.totalPoints)
         assertEquals(3, stats.totalQwirkles)
     }
+
+    @Test
+    fun finishGame_withAlternativeBonus_usesTwelvePerQwirkle() = runDb {
+        val (anna, peter) = addPlayers("Anna", "Peter")
+        val gameId = repository.startGame(listOf(anna.id, peter.id), false, qwirkleBonus = 12)
+        playTwoRounds(gameId, anna, peter)
+
+        repository.finishGame(gameId, endBonusPlayerId = null)
+
+        val game = repository.getGame(gameId)!!
+        assertEquals(12, game.qwirkleBonus)
+        assertEquals(71, game.totalPoints)      // 39 + 32
+        assertEquals(3, game.totalQwirkles)
+    }
+
+    @Test
+    fun startGame_defaultBonusIsSix() = runDb {
+        val (anna, peter) = addPlayers("Anna", "Peter")
+        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+
+        assertEquals(6, repository.getGame(gameId)!!.qwirkleBonus)
+    }
 }

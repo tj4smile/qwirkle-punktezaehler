@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 class GameRepository(
     private val playerDao: PlayerDao,
@@ -80,9 +81,14 @@ class GameRepository(
     /**
      * Legt ein neues, noch nicht beendetes Spiel samt Teilnehmern an.
      * Die Reihenfolge von playerIds ist die Spielreihenfolge.
+     * qwirkleBonus: 6 (Standard) oder 12 (Eingabevariante "Alternativ").
      * @return gameId
      */
-    suspend fun startGame(playerIds: List<Long>, isTestGame: Boolean): Long {
+    suspend fun startGame(
+        playerIds: List<Long>,
+        isTestGame: Boolean,
+        qwirkleBonus: Int = GameRules.QWIRKLE_BONUS
+    ): Long {
         require(playerIds.size in GameRules.MIN_PLAYERS..GameRules.MAX_PLAYERS) {
             "Ungültige Spieleranzahl: ${playerIds.size}"
         }
@@ -92,7 +98,8 @@ class GameRepository(
             GameHistory(
                 date = System.currentTimeMillis(),
                 playerCount = playerIds.size,
-                isTestGame = isTestGame
+                isTestGame = isTestGame,
+                qwirkleBonus = qwirkleBonus
             ),
             playerIds
         )
@@ -158,7 +165,7 @@ class GameRepository(
         val endBonus = if (endBonusPlayerId != null) GameRules.END_BONUS else 0
         gameDao.update(
             game.copy(
-                totalPoints = scores.sumOf { GameRules.roundTotal(it.points, it.qwirkles) } + endBonus,
+                totalPoints = scores.sumOf { GameRules.roundTotal(it.points, it.qwirkles, game.qwirkleBonus) } + endBonus,
                 totalQwirkles = scores.sumOf { it.qwirkles },
                 endBonusPlayerId = endBonusPlayerId,
                 isFinished = true
@@ -176,6 +183,10 @@ class GameRepository(
     fun getUnfinishedGame(): Flow<GameHistory?> = gameDao.getUnfinishedGame()
 
     suspend fun getGame(gameId: Long): GameHistory? = gameDao.getGame(gameId)
+
+    /** Qwirkle-Bonus des Spiels als Flow (Standard 6, falls das Spiel nicht gefunden wird). */
+    fun getQwirkleBonus(gameId: Long): Flow<Int> =
+        gameDao.getQwirkleBonus(gameId).map { it ?: GameRules.QWIRKLE_BONUS }
 
     /** Merkt sich, wer den Endspielbonus bekommt (null = niemand). Beendet das Spiel noch nicht. */
     suspend fun setEndBonusPlayer(gameId: Long, playerId: Long?) {

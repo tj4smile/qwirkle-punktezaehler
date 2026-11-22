@@ -45,6 +45,7 @@ import com.thomas.qwirkle.ui.components.PlayerColorDot
 import com.thomas.qwirkle.ui.components.rememberRepository
 import com.thomas.qwirkle.ui.components.screenPadding
 import com.thomas.qwirkle.util.GameCalculations
+import com.thomas.qwirkle.util.Formatting
 import com.thomas.qwirkle.util.GameRules
 import com.thomas.qwirkle.viewmodel.GameHistoryViewModel
 
@@ -57,20 +58,29 @@ fun GameHistoryScreen(
     onEditRound: (roundId: Long) -> Unit,
     onFinish: () -> Unit,
     onBack: () -> Unit,
+    readOnly: Boolean = false, // true = gespeichertes Spiel nur ansehen
     viewModel: GameHistoryViewModel = viewModel(
         factory = GameHistoryViewModel.factory(gameId, rememberRepository())
     )
 ) {
     val players by viewModel.players.collectAsState()
     val rounds by viewModel.rounds.collectAsState()
+    val qwirkleBonus by viewModel.qwirkleBonus.collectAsState()
+    val game by viewModel.game.collectAsState()
     var confirmDeleteLast by rememberSaveable { mutableStateOf(false) }
 
-    val totals = remember(players, rounds) { GameCalculations.playerTotals(players, rounds) }
+    // Gespeicherte Spiele: Endspielbonus gehört zur Summe
+    val endBonusPlayerId = if (readOnly) game?.endBonusPlayerId else null
+    val totals = remember(players, rounds, qwirkleBonus, endBonusPlayerId) {
+        GameCalculations.playerTotals(
+            players, rounds, endBonusPlayerId, qwirkleBonus
+        )
+    }
     val listState = rememberLazyListState()
 
     // Neueste Runde sichtbar halten
     LaunchedEffect(rounds.size) {
-        if (rounds.isNotEmpty()) listState.animateScrollToItem(rounds.size - 1)
+        if (!readOnly && rounds.isNotEmpty()) listState.animateScrollToItem(rounds.size - 1)
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -83,9 +93,20 @@ fun GameHistoryScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BackButton(onClick = onBack)
                 Text(
-                    stringResource(R.string.history_title),
+                    game?.takeIf { readOnly }?.let {
+                        stringResource(R.string.history_title_saved, Formatting.date(it.date))
+                    } ?: stringResource(R.string.history_title),
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (qwirkleBonus != GameRules.QWIRKLE_BONUS) {
+                Text(
+                    stringResource(R.string.variant_alternative_info, qwirkleBonus),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                 )
             }
 
@@ -119,12 +140,14 @@ fun GameHistoryScreen(
                                 if (score == null) {
                                     "–"
                                 } else {
-                                    GameRules.roundTotal(score.points, score.qwirkles).toString() +
+                                    GameRules.roundTotal(score.points, score.qwirkles, qwirkleBonus).toString() +
                                         if (score.qwirkles > 0) "★" else ""
                                 }
                             },
                             bold = false,
-                            onClick = { onEditRound(roundWithScores.round.id) }
+                            onClick = if (readOnly) null else {
+                                { onEditRound(roundWithScores.round.id) }
+                            }
                         )
                     }
                     item {
@@ -133,54 +156,74 @@ fun GameHistoryScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                stringResource(R.string.history_legend),
+                                if (qwirkleBonus == GameRules.QWIRKLE_BONUS) {
+                                    stringResource(R.string.history_legend)
+                                } else {
+                                    stringResource(R.string.history_legend_alternative, qwirkleBonus)
+                                },
                                 style = MaterialTheme.typography.bodySmall
                             )
-                            Text(
-                                stringResource(R.string.history_edit_hint),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            if (readOnly) {
+                                val bonusPlayer = players.firstOrNull { it.id == endBonusPlayerId }
+                                if (bonusPlayer != null) {
+                                    Text(
+                                        stringResource(
+                                            R.string.history_end_bonus,
+                                            bonusPlayer.name,
+                                            GameRules.END_BONUS
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    stringResource(R.string.history_edit_hint),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Button(onClick = onAddRound, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.history_add_round))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            if (!readOnly) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    TextButton(
-                        onClick = { confirmDeleteLast = true },
-                        enabled = rounds.isNotEmpty(),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.history_delete_last))
+                    Button(onClick = onAddRound, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.history_add_round))
                     }
-                    OutlinedButton(
-                        onClick = onFinish,
-                        enabled = rounds.isNotEmpty(),
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(stringResource(R.string.common_finish))
+                        TextButton(
+                            onClick = { confirmDeleteLast = true },
+                            enabled = rounds.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.history_delete_last))
+                        }
+                        OutlinedButton(
+                            onClick = onFinish,
+                            enabled = rounds.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(stringResource(R.string.common_finish))
+                        }
                     }
-                }
-                if (rounds.isEmpty()) {
-                    Text(
-                        stringResource(R.string.finish_needs_round),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (rounds.isEmpty()) {
+                        Text(
+                            stringResource(R.string.finish_needs_round),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }

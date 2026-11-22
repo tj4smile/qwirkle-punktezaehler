@@ -30,6 +30,10 @@ interface GameHistoryDao {
     @Query("SELECT * FROM game_history WHERE isFinished = 0 ORDER BY date DESC LIMIT 1")
     fun getUnfinishedGame(): Flow<GameHistory?>
 
+    // Qwirkle-Bonus (6 oder 12) eines Spiels
+    @Query("SELECT qwirkleBonus FROM game_history WHERE id = :gameId")
+    fun getQwirkleBonus(gameId: Long): Flow<Int?>
+
     @Query("SELECT * FROM game_history WHERE id = :gameId")
     suspend fun getGame(gameId: Long): GameHistory?
 

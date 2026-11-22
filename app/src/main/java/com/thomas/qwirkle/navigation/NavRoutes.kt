@@ -18,10 +18,12 @@ object NavRoutes {
     const val EDITROUND = "editround/{$ARG_GAME_ID}/{$ARG_ROUND_ID}" // Runde bearbeiten
     const val GAMEEND = "gameend/{$ARG_GAME_ID}"     // Spielende (Endspielbonus)
     const val RESULTS = "results/{$ARG_GAME_ID}"     // Endauswertung
+    const val GAMEDETAIL = "gamedetail/{$ARG_GAME_ID}" // gespeichertes Spiel ansehen (nur lesen)
 
     fun scoring(gameId: Long) = "scoring/$gameId"
     fun history(gameId: Long) = "history/$gameId"
     fun editRound(gameId: Long, roundId: Long) = "editround/$gameId/$roundId"
     fun gameEnd(gameId: Long) = "gameend/$gameId"
     fun results(gameId: Long) = "results/$gameId"
+    fun gameDetail(gameId: Long) = "gamedetail/$gameId"
 }

@@ -15,7 +15,8 @@ object GameCalculations {
     fun playerTotals(
         players: List<Player>,
         rounds: List<RoundWithScores>,
-        endBonusPlayerId: Long? = null
+        endBonusPlayerId: Long? = null,
+        qwirkleBonus: Int = GameRules.QWIRKLE_BONUS
     ): List<PlayerTotal> {
         val scores = rounds.flatMap { it.scores }
         return players.map { player ->
@@ -23,7 +24,7 @@ object GameCalculations {
             val endBonus = if (player.id == endBonusPlayerId) GameRules.END_BONUS else 0
             PlayerTotal(
                 player = player,
-                points = own.sumOf { GameRules.roundTotal(it.points, it.qwirkles) } + endBonus,
+                points = own.sumOf { GameRules.roundTotal(it.points, it.qwirkles, qwirkleBonus) } + endBonus,
                 qwirkles = own.sumOf { it.qwirkles }
             )
         }

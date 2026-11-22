@@ -23,7 +23,8 @@ class BackupFormatException(val reason: Reason, message: String) : Exception(mes
  */
 object BackupJson {
     const val FORMAT = "qwirkle-backup"
-    const val FORMAT_VERSION = 1
+    // Version 2: games enthält qwirkleBonus (fehlt es, wie in Version 1, gilt 6)
+    const val FORMAT_VERSION = 2
 
     fun encode(data: BackupData, exportedAt: Long = System.currentTimeMillis()): String {
         val root = JSONObject()
@@ -56,6 +57,7 @@ object BackupJson {
                         .put("isFinished", it.isFinished)
                         // JSONObject.NULL, sonst würde das Feld ganz weggelassen
                         .put("endBonusPlayerId", it.endBonusPlayerId ?: JSONObject.NULL)
+                        .put("qwirkleBonus", it.qwirkleBonus)
                 )
             }
         })
@@ -143,7 +145,9 @@ object BackupJson {
                         isTestGame = it.getBoolean("isTestGame"),
                         isFinished = it.getBoolean("isFinished"),
                         endBonusPlayerId = if (it.isNull("endBonusPlayerId")) null
-                        else it.getLong("endBonusPlayerId")
+                        else it.getLong("endBonusPlayerId"),
+                        // Sicherungen der Version 1 kennen das Feld nicht: Standard 6
+                        qwirkleBonus = it.optInt("qwirkleBonus", 6)
                     )
                 },
                 gamePlayers = root.getJSONArray("gamePlayers").objects().map {
@@ -204,6 +208,7 @@ object BackupJson {
 
         if (data.players.any { it.name.isBlank() }) inconsistent("Spieler ohne Namen")
         data.games.forEach {
+            if (it.qwirkleBonus < 1) inconsistent("Ungültiger Qwirkle-Bonus")
             if (it.endBonusPlayerId != null && it.endBonusPlayerId !in playerIds) {
                 inconsistent("Endbonus-Spieler unbekannt")
             }

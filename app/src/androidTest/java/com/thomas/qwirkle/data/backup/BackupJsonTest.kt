@@ -169,4 +169,36 @@ class BackupJsonTest {
 
         expectReason(BackupFormatException.Reason.INCONSISTENT, text)
     }
+
+    @Test
+    fun roundTrip_keepsAlternativeQwirkleBonus() {
+        val data = sample.copy(games = sample.games.map { it.copy(qwirkleBonus = 12) })
+
+        val decoded = BackupJson.decode(BackupJson.encode(data))
+
+        assertEquals(listOf(12, 12), decoded.games.map { it.qwirkleBonus })
+    }
+
+    @Test
+    fun decode_backupWithoutQwirkleBonus_usesSix() {
+        // Sicherungen der Formatversion 1 kennen das Feld nicht
+        val text = modified {
+            it.put("formatVersion", 1)
+            val games = it.getJSONArray("games")
+            for (i in 0 until games.length()) games.getJSONObject(i).remove("qwirkleBonus")
+        }
+
+        val decoded = BackupJson.decode(text)
+
+        assertEquals(listOf(6, 6), decoded.games.map { it.qwirkleBonus })
+    }
+
+    @Test
+    fun decode_invalidQwirkleBonus_isInconsistent() {
+        val text = modified {
+            it.getJSONArray("games").getJSONObject(0).put("qwirkleBonus", 0)
+        }
+
+        expectReason(BackupFormatException.Reason.INCONSISTENT, text)
+    }
 }

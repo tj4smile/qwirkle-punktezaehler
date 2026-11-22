@@ -57,7 +57,22 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         }
 
         composable(NavRoutes.STATISTICS) {
-            StatisticsScreen(onBack = { navController.popBackStack() })
+            StatisticsScreen(
+                onBack = { navController.popBackStack() },
+                onShowGame = { gameId -> navController.navigate(NavRoutes.gameDetail(gameId)) }
+            )
+        }
+
+        // Gespeichertes Spiel: Rundenübersicht nur zum Ansehen
+        composable(NavRoutes.GAMEDETAIL, arguments = gameIdArgument) { entry ->
+            GameHistoryScreen(
+                gameId = entry.gameId(),
+                onAddRound = {},
+                onEditRound = {},
+                onFinish = {},
+                onBack = { navController.popBackStack() },
+                readOnly = true
+            )
         }
 
         composable(NavRoutes.INFO) {

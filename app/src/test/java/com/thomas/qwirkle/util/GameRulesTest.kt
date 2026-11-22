@@ -40,4 +40,22 @@ class GameRulesTest {
     fun roundTotal_zeroEverything_isZero() {
         assertEquals(0, GameRules.roundTotal(points = 0, qwirkles = 0))
     }
+
+    @Test
+    fun alternativeBonus_isTwelvePerQwirkle() {
+        assertEquals(12, GameRules.ALTERNATIVE_QWIRKLE_BONUS)
+        assertEquals(12, GameRules.qwirkleBonus(1, GameRules.ALTERNATIVE_QWIRKLE_BONUS))
+        assertEquals(36, GameRules.qwirkleBonus(3, GameRules.ALTERNATIVE_QWIRKLE_BONUS))
+    }
+
+    @Test
+    fun roundTotal_alternative_oneQwirklePlusThreeCrossPoints_isFifteen() {
+        assertEquals(15, GameRules.roundTotal(points = 3, qwirkles = 1, bonusPerQwirkle = 12))
+    }
+
+    @Test
+    fun roundTotal_standard_sameMoveEnteredWithQwirkleRow_isAlsoFifteen() {
+        // Qwirkle-Reihe 6 + Querreihe 3 = 9 eingetragen, dazu 6 Bonus
+        assertEquals(15, GameRules.roundTotal(points = 9, qwirkles = 1))
+    }
 }

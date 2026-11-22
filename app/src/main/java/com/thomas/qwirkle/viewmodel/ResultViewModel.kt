@@ -19,7 +19,13 @@ import kotlinx.coroutines.launch
 data class ResultState(
     val game: GameHistory,
     val ranking: List<Pair<Int, PlayerTotal>>
-)
+) {
+    /** Summe aller Spieler: Punkte inklusive Qwirkle-Bonus und Endspielbonus. */
+    val totalPoints: Int get() = ranking.sumOf { it.second.points }
+
+    /** Summe aller Qwirkles aller Spieler. */
+    val totalQwirkles: Int get() = ranking.sumOf { it.second.qwirkles }
+}
 
 class ResultViewModel(
     private val gameId: Long,
@@ -33,7 +39,8 @@ class ResultViewModel(
         val totals = GameCalculations.playerTotals(
             players,
             gameWithRounds.rounds,
-            gameWithRounds.game.endBonusPlayerId
+            gameWithRounds.game.endBonusPlayerId,
+            gameWithRounds.game.qwirkleBonus
         )
         ResultState(gameWithRounds.game, GameCalculations.ranking(totals))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
