@@ -3,9 +3,9 @@ QWIRKLE PUNKTEZÄHLER
 Technische Projektdokumentation
 ================================================================================
 
-Dokumentversion : 2.20
-Stand           : 18.11.2026
-App-Version     : 1.8 (versionCode 9)
+Dokumentversion : 2.22
+Stand           : 22.11.2026
+App-Version     : 1.9 (versionCode 10), Datenbank Version 3
 Paketname       : com.thomas.qwirkle
 Plattform       : Android (Kotlin, Jetpack Compose)
 Sprache der UI  : Deutsch (bei deutscher Systemsprache), sonst Englisch
@@ -1514,7 +1514,7 @@ ENDE DER DOKUMENTATION
   - Testspiele erscheinen weiterhin nicht in der Statistik und damit auch nicht
     in dieser Ansicht.
 
-ÄNDERUNGEN 2.20 (Release 1.8)
+ÄNDERUNGEN 2.20 (Stand 1.8, nicht gesondert veröffentlicht, in 1.9 enthalten)
   - App-Version 1.8, versionCode 9 (Datenbank Version 2, Schema 2.json im
     Repository unter app/schemas).
   - Neu in 1.8: Eingabevariante "Alternativ" (12 je Qwirkle), Gesamtsummen in der
@@ -1531,3 +1531,55 @@ ENDE DER DOKUMENTATION
   - Teststand: alle Unit- und Android-Tests grün, einschließlich Migration 1 -> 2.
   - Hinweis: Update über die alte App installieren (nicht deinstallieren), vorher
     JSON-Sicherung anlegen.
+
+ÄNDERUNGEN 2.21 (Export für die App "Punktezähler", Teil von 1.9)
+  Hinweis: Diese Änderungen ersetzen ältere Angaben in diesem Dokument zu Testspielen
+  (Abschnitte zu "Neues Spiel", Datenmodell, Statistik).
+  - Datenbank Version 3: neue Spalte game_history.uuid TEXT NOT NULL DEFAULT ''.
+    Migration 2 -> 3 (Migrations.MIGRATION_2_3) vergibt jeder vorhandenen Partie eine
+    zufällige UUID. Neue Partien bekommen sie im Entity-Default (UUID.randomUUID()).
+    Schema 3.json nach dem Bauen mit ins Repository.
+  - Backup: formatVersion 3 enthält die uuid; ältere Sicherungen (1 und 2) bekommen beim
+    Lesen neue UUIDs; doppelte UUIDs gelten als inkonsistent.
+  - Testspiel-Option bei "Neues Spiel" entfernt (GameRepository.startGame hat keinen
+    isTestGame-Parameter mehr). Die Spalte isTestGame bleibt für alte Daten; vorhandene
+    Testspiele zählen weiter nicht in Statistik und werden nicht exportiert.
+    Spiele löschen: Statistik, Spielliste, "Löschen" mit Sicherheitsabfrage (bestand schon).
+  - Austauschformat "punkte-austausch", formatVersion 1 (data/backup/ExchangeExport.kt):
+    nur abgeschlossene Nicht-Testspiele. Felder: format, formatVersion, quelle
+    (com.thomas.qwirkle), exportiertAm (ms UTC), partien[] mit externeId (= uuid), spiel
+    {name "Qwirkle", gewinntHoechste true, modus "PUNKTE"}, startZeit, endZeit, spieler[]
+    {name, farbe, reihenfolge (ab 1), endpunkte, platz}.
+    endpunkte = Punkte + Qwirkle-Bonus (6, bei Alternativ 12) + Endspielbonus.
+    platz: Gleichstand = gleicher Platz (1, 1, 3). Farbnamen nach colorIndex: rot, blau,
+    grün, gelb, lila, orange, türkis.
+    Offen: Die App speichert nur den Startzeitpunkt einer Partie, endZeit ist daher
+    gleich startZeit.
+  - Zwei Wege, dieselbe Datei: "Für Punktezähler exportieren" (Speichern unter, Storage
+    Access Framework) und "An Punktezähler senden" (ACTION_SEND, application/json, über
+    FileProvider aus cacheDir/exports). Beides auf dem Bildschirm "Daten sichern &
+    wiederherstellen". Ohne abgeschlossene Spiele erscheint eine Meldung statt einer
+    leeren Datei.
+  - FileProvider: AndroidManifest.xml braucht einen <provider>-Eintrag
+    (Authority ${applicationId}.fileprovider), res/xml/file_paths.xml gibt nur
+    cache/exports frei.
+  - Später (nicht jetzt): automatische Übernahme per ContentProvider mit gleichem
+    Signaturschlüssel. Dafür kommt nur Code dazu, keine Datenbankänderung.
+  - Tests: ExchangeExportTest (Endpunkte, Bonus 6/12, Endbonus, Plätze, Reihenfolge,
+    Farben, Filter), ExchangeJsonTest, MigrationTest (2 -> 3, 1 -> 3), BackupJsonTest
+    (uuid), GameRepositoryTest (eigene UUID je Spiel).
+
+ÄNDERUNGEN 2.22 (Release 1.9)
+  - App-Version 1.9, versionCode 10. Version 1.8 wurde nicht gesondert veröffentlicht;
+    1.9 enthält alles aus 2.18 bis 2.21: Eingabevariante "Alternativ", Gesamtsummen in
+    der Endauswertung, zweiter Speichern-Knopf, Ton bei Qwirkle, Leseansicht gespeicherter
+    Spiele, UUID je Partie, Export im Austauschformat "punkte-austausch" (Speichern unter
+    und Teilen), Testspiel-Option entfernt.
+  - Datenbank Version 3 (Schemas 1.json, 2.json, 3.json im Repository). Ein Update von
+    jeder früheren Version läuft über die Migrationen 1 -> 2 -> 3.
+  - Teststand: 119 Unit-Tests und 93 Android-Tests grün.
+  - Fehler, die beim Bau auftraten (zur Erinnerung): Die Migrations.kt muss
+    MIGRATION_2_3 im Code (object Migrations) enthalten und in ALL eintragen, nicht nur im
+    Kommentar; die Zeile kotlinx-serialization-core:1.8.1 bleibt in build.gradle.kts.
+  - Der Export enthält als endZeit den Startzeitpunkt der Partie (die App speichert
+    keine Endzeit).

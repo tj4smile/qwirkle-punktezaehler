@@ -31,8 +31,8 @@ keine Datenweitergabe.
 - Statistik: gespielte Partien, Rekorde, Spielerstatistik (Siege, Siegquote,
   Durchschnitt, Bestwert, Qwirkles); gespeicherte Spiele lassen sich mit allen
   Runden ansehen (nur lesen)
-- Testspiele, die nicht in die Statistik zählen
 - Sicherung und Wiederherstellung (JSON), Export für Excel (CSV)
+- Export der abgeschlossenen Spiele für die App „Punktezähler“ (Speichern unter oder Teilen)
 - Erinnerung an eine Sicherung, Info-Seite mit Spielregeln-Kurzfassung
 - Deutsch und Englisch (nach Systemsprache), helles und dunkles Design
 
@@ -80,7 +80,7 @@ gehört **nicht** ins Repository.
 
 Technik: Kotlin, Jetpack Compose, Material 3, Room, Navigation Compose,
 MVVM. Die ausführliche technische Dokumentation steht in
-[`docs/Qwirkle_Projektdokumentation.2.20.txt`](docs/Qwirkle_Projektdokumentation.2.20.txt).
+[`docs/Qwirkle_Projektdokumentation.2.22.txt`](docs/Qwirkle_Projektdokumentation.2.22.txt).
 
 ## Mitmachen
 
