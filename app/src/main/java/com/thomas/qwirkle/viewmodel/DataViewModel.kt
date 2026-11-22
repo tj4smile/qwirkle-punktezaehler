@@ -9,6 +9,7 @@ import com.thomas.qwirkle.data.backup.BackupFormatException
 import com.thomas.qwirkle.data.backup.BackupJson
 import com.thomas.qwirkle.data.backup.CsvExporter
 import com.thomas.qwirkle.data.backup.CsvLabels
+import com.thomas.qwirkle.data.backup.ExchangeExport
 import com.thomas.qwirkle.data.repository.BackupRepository
 import com.thomas.qwirkle.data.settings.AppSettings
 import kotlinx.coroutines.CancellationException
@@ -18,11 +19,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 
-enum class DataError { WRITE, READ, NOT_A_BACKUP, NEWER_VERSION, INCONSISTENT, TOO_LARGE, UNKNOWN }
+enum class DataError { WRITE, READ, NOT_A_BACKUP, NEWER_VERSION, INCONSISTENT, TOO_LARGE, NO_GAMES, UNKNOWN }
 
 sealed interface DataStatus {
     data object ExportDone : DataStatus
@@ -60,6 +62,47 @@ class DataViewModel(
             CsvExporter.BOM + CsvExporter.build(repository.createSnapshot(), labels, delimiter)
         }
 
+    /** Schreibt die Partien im Austauschformat "punkte-austausch" (für die App Punktezähler). */
+    fun exportExchange(open: () -> OutputStream?) = exportText(open) { createExchangeText() }
+
+    /**
+     * Schreibt dieselbe Datei in den Zwischenspeicher (cacheDir/exports) und meldet sie,
+     * damit sie über das Android-Teilen-Menü gesendet werden kann.
+     */
+    fun prepareExchangeShare(directory: File, fileName: String, onReady: (File) -> Unit) {
+        if (_isBusy.value) return
+        _isBusy.value = true
+        _status.value = null
+        viewModelScope.launch {
+            val result: Pair<DataStatus?, File?> = withContext(Dispatchers.IO) {
+                try {
+                    val text = createExchangeText()
+                    directory.mkdirs()
+                    val file = File(directory, fileName)
+                    file.writeText(text, Charsets.UTF_8)
+                    null to file
+                } catch (e: NoGamesToExport) {
+                    DataStatus.Failed(DataError.NO_GAMES) to null
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    DataStatus.Failed(DataError.WRITE) to null
+                }
+            }
+            _status.value = result.first
+            _isBusy.value = false
+            result.second?.let(onReady)
+        }
+    }
+
+    private class NoGamesToExport : Exception()
+
+    private suspend fun createExchangeText(): String {
+        val games = ExchangeExport.build(repository.createSnapshot())
+        if (games.isEmpty()) throw NoGamesToExport()
+        return ExchangeExport.encode(games)
+    }
+
     private fun exportText(
         open: () -> OutputStream?,
         onSuccess: () -> Unit = {},
@@ -75,6 +118,8 @@ class DataViewModel(
                     val stream = open() ?: throw IOException("Ziel nicht verfügbar")
                     stream.use { it.write(text.toByteArray(Charsets.UTF_8)) }
                     DataStatus.ExportDone
+                } catch (e: NoGamesToExport) {
+                    DataStatus.Failed(DataError.NO_GAMES)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

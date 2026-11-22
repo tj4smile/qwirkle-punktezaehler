@@ -1,20 +1,16 @@
 package com.thomas.qwirkle.ui.screens.newgame
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,7 +41,6 @@ fun NewGameScreen(
 ) {
     val players by viewModel.players.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
-    val isTestGame by viewModel.isTestGame.collectAsState()
     val colors by viewModel.colors.collectAsState()
     val qwirkleBonus by viewModel.qwirkleBonus.collectAsState()
 
@@ -157,26 +152,6 @@ fun NewGameScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(top = 6.dp)
                             )
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.setTestGame(!isTestGame) }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(checked = isTestGame, onCheckedChange = null)
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        stringResource(R.string.newgame_test_game),
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                    Text(
-                                        stringResource(R.string.newgame_test_game_hint),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
                         }
                     }
                 }

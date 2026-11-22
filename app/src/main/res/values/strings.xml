@@ -56,8 +56,6 @@
     <string name="newgame_selected">Selected: %1$d of %2$d</string>
     <string name="newgame_min_hint">Select at least %1$d players.</string>
     <string name="newgame_order_hint">Playing order: the order in which you select players.</string>
-    <string name="newgame_test_game">Mark as test game</string>
-    <string name="newgame_test_game_hint">Do not save in statistics</string>
 
     <!-- Score entry -->
     <string name="scoring_round">Round %1$d</string>
@@ -147,6 +145,11 @@
     <string name="data_csv_title">Export for Excel (CSV)</string>
     <string name="data_csv_text">A table with all rounds and points per player for analysis in Excel or LibreOffice. It cannot be loaded back into the app.</string>
     <string name="data_csv_button">Export CSV</string>
+    <string name="data_exchange_title">For Punktezähler</string>
+    <string name="data_exchange_text">Hands all finished games over to the Punktezähler app. Test games and running games are not included.</string>
+    <string name="data_exchange_save_button">Export for Punktezähler</string>
+    <string name="data_exchange_share_button">Send to Punktezähler</string>
+    <string name="data_exchange_share_title">Send to Punktezähler</string>
     <string name="data_import_title">Restore backup</string>
     <string name="data_import_text">Loads a previously saved backup (JSON). Existing data will be replaced.</string>
     <string name="data_import_button">Choose backup …</string>
@@ -161,6 +164,7 @@
     <string name="data_error_newer">This backup comes from a newer app version. Please update the app. Your data is unchanged.</string>
     <string name="data_error_inconsistent">The backup is damaged or incomplete. Your data is unchanged.</string>
     <string name="data_error_too_large">The file is too large for a backup. Your data is unchanged.</string>
+    <string name="data_error_no_games">There are no finished games to export yet.</string>
     <string name="data_error_unknown">The operation failed. Your data is unchanged.</string>
 
     <!-- CSV column headers -->

@@ -61,7 +61,9 @@ class PlayerStatisticsRepositoryTest {
         test: Boolean = false,
         finish: Boolean = true
     ): Long {
-        val gameId = repository.startGame(listOf(a.id, b.id), test)
+        val gameId = repository.startGame(listOf(a.id, b.id))
+        // Testspiele gibt es nur noch aus alten Daten: nachträglich markieren
+        if (test) db.gameHistoryDao().update(repository.getGame(gameId)!!.copy(isTestGame = true))
         repository.saveRound(gameId, listOf(ScoreEntry(a.id, pointsA, qwirklesA), ScoreEntry(b.id, pointsB, 0)))
         if (finish) repository.finishGame(gameId, endBonus?.id)
         return gameId

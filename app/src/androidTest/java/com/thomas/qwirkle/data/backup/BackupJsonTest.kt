@@ -201,4 +201,36 @@ class BackupJsonTest {
 
         expectReason(BackupFormatException.Reason.INCONSISTENT, text)
     }
+
+    @Test
+    fun roundTrip_keepsUuids() {
+        val decoded = BackupJson.decode(BackupJson.encode(sample))
+
+        assertEquals(sample.games.map { it.uuid }, decoded.games.map { it.uuid })
+    }
+
+    @Test
+    fun decode_backupWithoutUuid_assignsNewUniqueUuids() {
+        // Sicherungen der Formatversion 2 kennen keine UUID
+        val text = modified {
+            it.put("formatVersion", 2)
+            val games = it.getJSONArray("games")
+            for (i in 0 until games.length()) games.getJSONObject(i).remove("uuid")
+        }
+
+        val decoded = BackupJson.decode(text)
+
+        assertTrue(decoded.games.all { it.uuid.length == 36 })
+        assertEquals(2, decoded.games.map { it.uuid }.toSet().size)
+    }
+
+    @Test
+    fun decode_duplicateUuid_isInconsistent() {
+        val text = modified {
+            val games = it.getJSONArray("games")
+            games.getJSONObject(1).put("uuid", games.getJSONObject(0).getString("uuid"))
+        }
+
+        expectReason(BackupFormatException.Reason.INCONSISTENT, text)
+    }
 }

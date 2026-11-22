@@ -248,7 +248,7 @@ class GameRepositoryTest {
     fun startGame_createsUnfinishedGameWithPlayersInOrder() = runDb {
         val (anna, peter, klaus) = addPlayers("Anna", "Peter", "Klaus")
 
-        val gameId = repository.startGame(listOf(klaus.id, anna.id, peter.id), isTestGame = false)
+        val gameId = repository.startGame(listOf(klaus.id, anna.id, peter.id))
 
         val game = repository.getGame(gameId)
         assertNotNull(game)
@@ -262,22 +262,26 @@ class GameRepositoryTest {
     }
 
     @Test
-    fun startGame_testGame_isMarked() = runDb {
+    fun startGame_givesEveryGameItsOwnUuid() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
 
-        val gameId = repository.startGame(listOf(anna.id, peter.id), isTestGame = true)
+        val first = repository.getGame(repository.startGame(listOf(anna.id, peter.id)))!!
+        repository.finishGame(first.id, null)
+        val second = repository.getGame(repository.startGame(listOf(anna.id, peter.id)))!!
 
-        assertTrue(repository.getGame(gameId)!!.isTestGame)
+        assertEquals(36, first.uuid.length)
+        assertTrue(first.uuid != second.uuid)
+        assertFalse(first.isTestGame)
     }
 
     @Test
     fun startGame_withOnePlayer_isRejected() = runDb {
-        assertIllegalArgument { repository.startGame(listOf(1L), isTestGame = false) }
+        assertIllegalArgument { repository.startGame(listOf(1L)) }
     }
 
     @Test
     fun startGame_withEightPlayers_isRejected() = runDb {
-        assertIllegalArgument { repository.startGame((1L..8L).toList(), isTestGame = false) }
+        assertIllegalArgument { repository.startGame((1L..8L).toList()) }
     }
 
     @Test
@@ -285,7 +289,7 @@ class GameRepositoryTest {
         val names = (1..7).map { "Spieler$it" }.toTypedArray()
         val players = addPlayers(*names)
 
-        val gameId = repository.startGame(players.map { it.id }, isTestGame = false)
+        val gameId = repository.startGame(players.map { it.id })
 
         assertEquals(7, repository.getGamePlayersOnce(gameId).size)
     }
@@ -293,9 +297,9 @@ class GameRepositoryTest {
     @Test
     fun startGame_replacesOlderUnfinishedGame() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val first = repository.startGame(listOf(anna.id, peter.id), false)
+        val first = repository.startGame(listOf(anna.id, peter.id))
 
-        val second = repository.startGame(listOf(anna.id, peter.id), false)
+        val second = repository.startGame(listOf(anna.id, peter.id))
 
         assertNull(repository.getGame(first))
         assertEquals(second, repository.getUnfinishedGame().first()?.id)
@@ -304,10 +308,10 @@ class GameRepositoryTest {
     @Test
     fun startGame_keepsFinishedGames() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val first = repository.startGame(listOf(anna.id, peter.id), false)
+        val first = repository.startGame(listOf(anna.id, peter.id))
         repository.finishGame(first, null)
 
-        repository.startGame(listOf(anna.id, peter.id), false)
+        repository.startGame(listOf(anna.id, peter.id))
 
         assertNotNull(repository.getGame(first))
     }
@@ -320,7 +324,7 @@ class GameRepositoryTest {
     @Test
     fun deletedPlayer_staysPartOfExistingGame() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
 
         repository.deletePlayer(anna.id)
 
@@ -335,7 +339,7 @@ class GameRepositoryTest {
     @Test
     fun saveRound_numbersRoundsConsecutively() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         val entries = listOf(ScoreEntry(anna.id, 1, 0), ScoreEntry(peter.id, 2, 0))
 
         assertEquals(1, repository.saveRound(gameId, entries))
@@ -346,7 +350,7 @@ class GameRepositoryTest {
     @Test
     fun saveRound_storesPointsAndQwirklesPerPlayer() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         val rounds = repository.getRoundsWithScores(gameId).first()
@@ -363,7 +367,7 @@ class GameRepositoryTest {
     @Test
     fun saveRound_savesOneScorePerPlayer() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         val rounds = repository.getRoundsWithScores(gameId).first()
@@ -374,7 +378,7 @@ class GameRepositoryTest {
     @Test
     fun deleteRound_removesRoundWithItsScores_andNumberIsReused() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         val last = repository.getRoundsWithScores(gameId).first().last()
@@ -391,9 +395,9 @@ class GameRepositoryTest {
     @Test
     fun rounds_belongToTheirOwnGameOnly() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val first = repository.startGame(listOf(anna.id, peter.id), false)
+        val first = repository.startGame(listOf(anna.id, peter.id))
         repository.finishGame(first, null)
-        val second = repository.startGame(listOf(anna.id, peter.id), false)
+        val second = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(second, anna, peter)
 
         assertTrue(repository.getRoundsWithScores(first).first().isEmpty())
@@ -405,7 +409,7 @@ class GameRepositoryTest {
     @Test
     fun finishGame_calculatesTotalsIncludingBonuses() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         repository.finishGame(gameId, endBonusPlayerId = peter.id)
@@ -420,7 +424,7 @@ class GameRepositoryTest {
     @Test
     fun finishGame_withoutEndBonus_addsNoBonus() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         repository.finishGame(gameId, endBonusPlayerId = null)
@@ -433,7 +437,7 @@ class GameRepositoryTest {
     @Test
     fun setEndBonusPlayer_doesNotFinishTheGame() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
 
         repository.setEndBonusPlayer(gameId, anna.id)
 
@@ -446,7 +450,7 @@ class GameRepositoryTest {
     @Test
     fun setEndBonusPlayer_nullClearsTheChoice() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         repository.setEndBonusPlayer(gameId, anna.id)
 
         repository.setEndBonusPlayer(gameId, null)
@@ -457,7 +461,7 @@ class GameRepositoryTest {
     @Test
     fun discardGame_removesGameRoundsAndParticipants() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(gameId, anna, peter)
 
         repository.discardGame(gameId)
@@ -470,7 +474,7 @@ class GameRepositoryTest {
     @Test
     fun discardGame_keepsThePlayers() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
 
         repository.discardGame(gameId)
 
@@ -563,11 +567,13 @@ class GameRepositoryTest {
     fun finishedRealGame_appearsInStatistics_testGameDoesNot() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
 
-        val real = repository.startGame(listOf(anna.id, peter.id), isTestGame = false)
+        val real = repository.startGame(listOf(anna.id, peter.id))
         playTwoRounds(real, anna, peter)
         repository.finishGame(real, peter.id)
 
-        val test = repository.startGame(listOf(anna.id, peter.id), isTestGame = true)
+        val test = repository.startGame(listOf(anna.id, peter.id))
+        // Testspiele gibt es nur noch aus alten Daten: nachträglich markieren
+        db.gameHistoryDao().update(repository.getGame(test)!!.copy(isTestGame = true))
         playTwoRounds(test, anna, peter)
         repository.finishGame(test, null)
 
@@ -580,7 +586,7 @@ class GameRepositoryTest {
     @Test
     fun finishGame_withAlternativeBonus_usesTwelvePerQwirkle() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false, qwirkleBonus = 12)
+        val gameId = repository.startGame(listOf(anna.id, peter.id), qwirkleBonus = 12)
         playTwoRounds(gameId, anna, peter)
 
         repository.finishGame(gameId, endBonusPlayerId = null)
@@ -594,7 +600,7 @@ class GameRepositoryTest {
     @Test
     fun startGame_defaultBonusIsSix() = runDb {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
 
         assertEquals(6, repository.getGame(gameId)!!.qwirkleBonus)
     }

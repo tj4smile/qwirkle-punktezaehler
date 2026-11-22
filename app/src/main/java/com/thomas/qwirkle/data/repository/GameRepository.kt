@@ -86,7 +86,6 @@ class GameRepository(
      */
     suspend fun startGame(
         playerIds: List<Long>,
-        isTestGame: Boolean,
         qwirkleBonus: Int = GameRules.QWIRKLE_BONUS
     ): Long {
         require(playerIds.size in GameRules.MIN_PLAYERS..GameRules.MAX_PLAYERS) {
@@ -98,7 +97,6 @@ class GameRepository(
             GameHistory(
                 date = System.currentTimeMillis(),
                 playerCount = playerIds.size,
-                isTestGame = isTestGame,
                 qwirkleBonus = qwirkleBonus
             ),
             playerIds

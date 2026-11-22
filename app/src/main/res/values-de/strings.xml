@@ -52,8 +52,6 @@
     <string name="newgame_selected">Ausgewählt: %1$d von %2$d</string>
     <string name="newgame_min_hint">Mindestens %1$d Spieler wählen.</string>
     <string name="newgame_order_hint">Spielreihenfolge: in der Reihenfolge der Auswahl.</string>
-    <string name="newgame_test_game">Als Testspiel markieren</string>
-    <string name="newgame_test_game_hint">Nicht in Statistik speichern</string>
 
     <!-- Punkteerfassung -->
     <string name="scoring_round">Runde %1$d</string>
@@ -144,6 +142,11 @@
     <string name="data_csv_title">Export für Excel (CSV)</string>
     <string name="data_csv_text">Eine Tabelle mit allen Runden und Punkten pro Spieler zum Auswerten in Excel oder LibreOffice. Sie kann nicht wieder in die App geladen werden.</string>
     <string name="data_csv_button">CSV exportieren</string>
+    <string name="data_exchange_title">Für Punktezähler</string>
+    <string name="data_exchange_text">Übergibt alle abgeschlossenen Spiele an die App Punktezähler. Testspiele und laufende Spiele sind nicht dabei.</string>
+    <string name="data_exchange_save_button">Für Punktezähler exportieren</string>
+    <string name="data_exchange_share_button">An Punktezähler senden</string>
+    <string name="data_exchange_share_title">An Punktezähler senden</string>
     <string name="data_import_title">Sicherung einspielen</string>
     <string name="data_import_text">Lädt eine zuvor gespeicherte Sicherung (JSON). Die vorhandenen Daten werden dabei ersetzt.</string>
     <string name="data_import_button">Sicherung auswählen …</string>
@@ -158,6 +161,7 @@
     <string name="data_error_newer">Diese Sicherung stammt aus einer neueren App-Version. Bitte aktualisiere die App. Deine Daten sind unverändert.</string>
     <string name="data_error_inconsistent">Die Sicherung ist beschädigt oder unvollständig. Deine Daten sind unverändert.</string>
     <string name="data_error_too_large">Die Datei ist zu groß für eine Sicherung. Deine Daten sind unverändert.</string>
+    <string name="data_error_no_games">Es gibt noch keine abgeschlossenen Spiele zum Exportieren.</string>
     <string name="data_error_unknown">Der Vorgang ist fehlgeschlagen. Deine Daten sind unverändert.</string>
 
     <!-- CSV-Spaltenüberschriften -->

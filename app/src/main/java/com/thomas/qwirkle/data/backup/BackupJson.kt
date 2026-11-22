@@ -9,6 +9,7 @@ import com.thomas.qwirkle.data.entity.RoundScore
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.UUID
 
 class BackupFormatException(val reason: Reason, message: String) : Exception(message) {
     enum class Reason { NOT_A_BACKUP, NEWER_VERSION, INCONSISTENT }
@@ -24,7 +25,8 @@ class BackupFormatException(val reason: Reason, message: String) : Exception(mes
 object BackupJson {
     const val FORMAT = "qwirkle-backup"
     // Version 2: games enthält qwirkleBonus (fehlt es, wie in Version 1, gilt 6)
-    const val FORMAT_VERSION = 2
+    // Version 3: games enthält uuid (fehlt sie, wie in Version 1 und 2, wird beim Lesen eine neue vergeben)
+    const val FORMAT_VERSION = 3
 
     fun encode(data: BackupData, exportedAt: Long = System.currentTimeMillis()): String {
         val root = JSONObject()
@@ -58,6 +60,7 @@ object BackupJson {
                         // JSONObject.NULL, sonst würde das Feld ganz weggelassen
                         .put("endBonusPlayerId", it.endBonusPlayerId ?: JSONObject.NULL)
                         .put("qwirkleBonus", it.qwirkleBonus)
+                        .put("uuid", it.uuid)
                 )
             }
         })
@@ -147,7 +150,9 @@ object BackupJson {
                         endBonusPlayerId = if (it.isNull("endBonusPlayerId")) null
                         else it.getLong("endBonusPlayerId"),
                         // Sicherungen der Version 1 kennen das Feld nicht: Standard 6
-                        qwirkleBonus = it.optInt("qwirkleBonus", 6)
+                        qwirkleBonus = it.optInt("qwirkleBonus", 6),
+                        // Sicherungen vor Version 3 kennen keine UUID: neue vergeben
+                        uuid = it.optString("uuid", "").ifBlank { UUID.randomUUID().toString() }
                     )
                 },
                 gamePlayers = root.getJSONArray("gamePlayers").objects().map {
@@ -193,7 +198,7 @@ object BackupJson {
 
     /** Prüft Eindeutigkeit der IDs, gültige Verweise und sinnvolle Werte, bevor etwas gelöscht wird. */
     private fun validate(data: BackupData) {
-        fun requireUnique(ids: List<Long>, table: String) {
+        fun requireUnique(ids: List<Any>, table: String) {
             if (ids.toSet().size != ids.size) inconsistent("Doppelte IDs in $table")
         }
         requireUnique(data.players.map { it.id }, "players")
@@ -207,6 +212,7 @@ object BackupJson {
         val roundIds = data.rounds.map { it.id }.toSet()
 
         if (data.players.any { it.name.isBlank() }) inconsistent("Spieler ohne Namen")
+        requireUnique(data.games.map { it.uuid }, "games (uuid)")
         data.games.forEach {
             if (it.qwirkleBonus < 1) inconsistent("Ungültiger Qwirkle-Bonus")
             if (it.endBonusPlayerId != null && it.endBonusPlayerId !in playerIds) {

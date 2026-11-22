@@ -75,4 +75,59 @@ class MigrationTest {
             assertEquals(59, it.getInt(1))
         }
     }
+
+    @Test
+    fun migration2To3_givesEveryExistingGameItsOwnUuid() {
+        helper.createDatabase(dbName, 2).apply {
+            execSQL(
+                "INSERT INTO game_history (id, date, playerCount, totalPoints, totalQwirkles, " +
+                    "isTestGame, isFinished, endBonusPlayerId, qwirkleBonus) " +
+                    "VALUES (10, 1700000000000, 2, 59, 3, 0, 1, NULL, 12)"
+            )
+            execSQL(
+                "INSERT INTO game_history (id, date, playerCount, totalPoints, totalQwirkles, " +
+                    "isTestGame, isFinished, endBonusPlayerId, qwirkleBonus) " +
+                    "VALUES (11, 1700100000000, 3, 70, 2, 0, 1, NULL, 6)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(dbName, 3, true, Migrations.MIGRATION_2_3)
+
+        val uuids = mutableListOf<String>()
+        db.query("SELECT uuid, totalPoints, qwirkleBonus FROM game_history ORDER BY id").use {
+            while (it.moveToNext()) {
+                uuids.add(it.getString(0))
+            }
+        }
+        assertEquals(2, uuids.size)
+        assertTrue(uuids.all { it.length == 36 })
+        assertTrue(uuids[0] != uuids[1])
+        // Alte Werte bleiben unverändert
+        db.query("SELECT totalPoints, qwirkleBonus FROM game_history WHERE id = 10").use {
+            assertTrue(it.moveToFirst())
+            assertEquals(59, it.getInt(0))
+            assertEquals(12, it.getInt(1))
+        }
+    }
+
+    @Test
+    fun allMigrations_fromVersion1_reachCurrentVersion() {
+        helper.createDatabase(dbName, 1).apply {
+            execSQL(
+                "INSERT INTO game_history (id, date, playerCount, totalPoints, totalQwirkles, " +
+                    "isTestGame, isFinished, endBonusPlayerId) " +
+                    "VALUES (10, 1700000000000, 2, 59, 3, 0, 1, NULL)"
+            )
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(dbName, 3, true, *Migrations.ALL)
+
+        db.query("SELECT uuid, qwirkleBonus FROM game_history WHERE id = 10").use {
+            assertTrue(it.moveToFirst())
+            assertEquals(36, it.getString(0).length)
+            assertEquals(6, it.getInt(1))
+        }
+    }
 }

@@ -17,7 +17,7 @@ import com.thomas.qwirkle.data.entity.Round
 import com.thomas.qwirkle.data.entity.RoundScore
 
 /** Aktuelle Datenbank-Version. Bei jeder Schema-Änderung erhöhen (siehe Migrations.kt). */
-const val DATABASE_VERSION = 2
+const val DATABASE_VERSION = 3
 
 @Database(
     entities = [

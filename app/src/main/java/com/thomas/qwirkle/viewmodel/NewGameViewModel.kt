@@ -26,9 +26,6 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _selectedIds = MutableStateFlow<List<Long>>(emptyList())
     val selectedIds: StateFlow<List<Long>> = _selectedIds
 
-    private val _isTestGame = MutableStateFlow(false)
-    val isTestGame: StateFlow<Boolean> = _isTestGame
-
     fun togglePlayer(id: Long) {
         _selectedIds.update { current ->
             when {
@@ -45,10 +42,6 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun setQwirkleBonus(value: Int) {
         _qwirkleBonus.value = value
-    }
-
-    fun setTestGame(value: Boolean) {
-        _isTestGame.value = value
     }
 
     /**
@@ -80,7 +73,7 @@ class NewGameViewModel(private val repository: GameRepository) : ViewModel() {
                 selected.zip(unique)
                     .filter { (player, color) -> player.colorIndex != color }
                     .forEach { (player, color) -> repository.changePlayerColor(player, color) }
-                val gameId = repository.startGame(selected.map { it.id }, _isTestGame.value, _qwirkleBonus.value)
+                val gameId = repository.startGame(selected.map { it.id }, _qwirkleBonus.value)
                 onStarted(gameId)
             } finally {
                 _isStarting.value = false

@@ -68,7 +68,7 @@ class RoundEditRepositoryTest {
     /** Runde 1: Anna 10, Peter 20 mit 1 Qwirkle. Runde 2: Anna 5 mit 2 Qwirkles, Peter 0. */
     private suspend fun twoRounds(): Triple<Long, Player, Player> {
         val (anna, peter) = addPlayers("Anna", "Peter")
-        val gameId = repository.startGame(listOf(anna.id, peter.id), false)
+        val gameId = repository.startGame(listOf(anna.id, peter.id))
         repository.saveRound(gameId, listOf(ScoreEntry(anna.id, 10, 0), ScoreEntry(peter.id, 20, 1)))
         repository.saveRound(gameId, listOf(ScoreEntry(anna.id, 5, 2), ScoreEntry(peter.id, 0, 0)))
         return Triple(gameId, anna, peter)

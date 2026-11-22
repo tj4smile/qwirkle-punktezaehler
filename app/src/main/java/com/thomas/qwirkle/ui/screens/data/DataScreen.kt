@@ -30,12 +30,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.thomas.qwirkle.R
 import com.thomas.qwirkle.data.backup.CsvExporter
 import com.thomas.qwirkle.data.backup.CsvLabels
+import com.thomas.qwirkle.data.backup.ExchangeExport
 import com.thomas.qwirkle.ui.components.BackButton
 import com.thomas.qwirkle.ui.components.rememberBackupRepository
 import com.thomas.qwirkle.ui.components.rememberSettings
@@ -43,6 +45,9 @@ import com.thomas.qwirkle.ui.components.screenPadding
 import com.thomas.qwirkle.viewmodel.DataError
 import com.thomas.qwirkle.viewmodel.DataStatus
 import com.thomas.qwirkle.viewmodel.DataViewModel
+import android.content.ClipData
+import android.content.Intent
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,6 +97,17 @@ fun DataScreen(
             }
         }
     }
+
+    val exchangeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(ExchangeExport.MIME_TYPE)
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportExchange { context.contentResolver.openOutputStream(uri, "wt") }
+        }
+    }
+
+    val shareTitle = stringResource(R.string.data_exchange_share_title)
+    val exchangeFileName = "punkte-austausch-qwirkle-$today.json"
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -154,6 +170,40 @@ fun DataScreen(
                         enabled = !isBusy,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(stringResource(R.string.data_csv_button)) }
+                }
+
+                ActionCard(
+                    title = stringResource(R.string.data_exchange_title),
+                    text = stringResource(R.string.data_exchange_text)
+                ) {
+                    Button(
+                        onClick = {
+                            viewModel.clearStatus()
+                            exchangeLauncher.launch(exchangeFileName)
+                        },
+                        enabled = !isBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.data_exchange_save_button)) }
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.prepareExchangeShare(
+                                File(context.cacheDir, "exports"), exchangeFileName
+                            ) { file ->
+                                val uri = FileProvider.getUriForFile(
+                                    context, "${context.packageName}.fileprovider", file
+                                )
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = ExchangeExport.MIME_TYPE
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    clipData = ClipData.newRawUri("", uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(send, shareTitle))
+                            }
+                        },
+                        enabled = !isBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(stringResource(R.string.data_exchange_share_button)) }
                 }
 
                 ActionCard(
@@ -220,6 +270,7 @@ private fun StatusCard(status: DataStatus) {
                 DataError.NEWER_VERSION -> R.string.data_error_newer
                 DataError.INCONSISTENT -> R.string.data_error_inconsistent
                 DataError.TOO_LARGE -> R.string.data_error_too_large
+                DataError.NO_GAMES -> R.string.data_error_no_games
                 DataError.UNKNOWN -> R.string.data_error_unknown
             }
         )
